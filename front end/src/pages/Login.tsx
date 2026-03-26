@@ -16,20 +16,18 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      const success = login(username, password);
-      if (success) {
-        const stored = JSON.parse(localStorage.getItem('clinicUser')!);
-        navigate(getRolePath(stored.role));
-      } else {
-        setError('Invalid username or password');
-      }
-      setLoading(false);
-    }, 500);
+    const success = await login(username, password);
+    if (success) {
+      const stored = JSON.parse(localStorage.getItem('clinicUser')!);
+      navigate(getRolePath(stored.role));
+    } else {
+      setError('Invalid username or password');
+    }
+    setLoading(false);
   };
 
   return (

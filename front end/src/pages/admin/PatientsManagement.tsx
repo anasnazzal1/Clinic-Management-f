@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patients as initialPatients, Patient } from '@/data/mockData';
+import { patientsApi, usersApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,32 +10,44 @@ import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PatientsManagement = () => {
-  const [data, setData] = useState<Patient[]>([...initialPatients]);
+  const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Patient | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const emptyForm = { name: '', age: '', gender: '', phone: '', email: '', address: '', username: '', password: '' };
   const [form, setForm] = useState(emptyForm);
 
-  const filtered = data.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const load = () => patientsApi.getAll(search || undefined).then(r => setData(r.data)).catch(() => {});
+  useEffect(() => { load(); }, [search]);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
-  const openEdit = (p: Patient) => { setEditing(p); setForm({ name: p.name, age: String(p.age), gender: p.gender, phone: p.phone, email: p.email, address: p.address, username: '', password: '' }); setOpen(true); };
+  const openEdit = (p: any) => { setEditing(p); setForm({ name: p.name, age: String(p.age || ''), gender: p.gender || '', phone: p.phone || '', email: p.email || '', address: p.address || '', username: '', password: '' }); setOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required'); return; }
-    if (editing) {
-      setData(d => d.map(p => p.id === editing.id ? { ...p, name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address } : p));
-      toast.success('Patient updated');
-    } else {
-      setData(d => [...d, { id: `p${Date.now()}`, name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address }]);
-      toast.success('Patient added with login credentials');
-    }
-    setOpen(false);
+    const payload = { name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address };
+    try {
+      if (editing) {
+        const { data: updated } = await patientsApi.update(editing._id, payload);
+        setData(d => d.map(p => p._id === editing._id ? updated : p));
+        toast.success('Patient updated');
+      } else {
+        const { data: created } = await patientsApi.create(payload);
+        if (form.username && form.password) {
+          await usersApi.register({ username: form.username, password: form.password, role: 'patient', name: form.name, email: form.email, linkedId: created._id });
+        }
+        setData(d => [...d, created]);
+        toast.success('Patient added');
+      }
+      setOpen(false);
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save patient'); }
   };
 
-  const handleDelete = (id: string) => { setData(d => d.filter(p => p.id !== id)); toast.success('Patient deleted'); };
+  const handleDelete = async (id: string) => {
+    try { await patientsApi.delete(id); setData(d => d.filter(p => p._id !== id)); toast.success('Patient deleted'); }
+    catch { toast.error('Failed to delete patient'); }
+  };
 
   return (
     <div className="space-y-6">
@@ -52,17 +64,17 @@ const PatientsManagement = () => {
           <table className="w-full text-sm">
             <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Name</th><th className="text-left py-2 font-medium">Age</th><th className="text-left py-2 font-medium hidden md:table-cell">Gender</th><th className="text-left py-2 font-medium hidden md:table-cell">Phone</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No patients found.</td></tr>}
-              {filtered.map(p => (
-                <tr key={p.id} className="border-b last:border-0">
+              {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No patients found.</td></tr>}
+              {data.map(p => (
+                <tr key={p._id} className="border-b last:border-0">
                   <td className="py-2.5 font-medium text-foreground">{p.name}</td>
                   <td className="py-2.5 text-muted-foreground">{p.age}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{p.gender}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{p.phone}</td>
                   <td className="py-2.5 text-right space-x-1">
-                    <Button variant="ghost" size="icon" title="View Profile" onClick={() => navigate(`/admin/patients/${p.id}`)}><Eye className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" title="View Profile" onClick={() => navigate(`/admin/patients/${p._id}`)}><Eye className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(p._id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   </td>
                 </tr>
               ))}
@@ -70,8 +82,6 @@ const PatientsManagement = () => {
           </table>
         </CardContent>
       </Card>
-
-      {/* Add/Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? 'Edit' : 'Add'} Patient</DialogTitle></DialogHeader>

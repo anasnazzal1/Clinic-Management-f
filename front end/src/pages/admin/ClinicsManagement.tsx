@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { clinics as initialClinics, Clinic } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { clinicsApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ function parseDays(str: string): string[] {
 function parseTime(str: string): string {
   if (!str) return '';
   const m = str.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!m) return '';
+  if (!m) return str.includes(':') ? str : '';
   let h = parseInt(m[1]);
   const min = m[2];
   const period = m[3].toUpperCase();
@@ -36,42 +36,53 @@ function parseTime(str: string): string {
 }
 
 const ClinicsManagement = () => {
-  const [data, setData] = useState<Clinic[]>([...initialClinics]);
+  const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Clinic | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const emptyForm = { name: '', workingDays: [] as string[], startTime: '', endTime: '' };
   const [form, setForm] = useState(emptyForm);
 
-  const filtered = data.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const load = () => clinicsApi.getAll(search || undefined).then(r => setData(r.data)).catch(() => {});
+
+  useEffect(() => { load(); }, [search]);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
-  const openEdit = (c: Clinic) => {
-    const [startRaw, endRaw] = c.workingHours.split(' - ');
+  const openEdit = (c: any) => {
+    const [startRaw, endRaw] = (c.workingHours || '').split(' - ');
     setEditing(c);
-    setForm({ name: c.name, workingDays: parseDays(c.workingDays), startTime: parseTime(startRaw?.trim()), endTime: parseTime(endRaw?.trim()) });
+    setForm({ name: c.name, workingDays: parseDays(c.workingDays || ''), startTime: parseTime(startRaw?.trim() || ''), endTime: parseTime(endRaw?.trim() || '') });
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Department name is required'); return; }
     if (form.startTime && form.endTime && form.endTime <= form.startTime) { toast.error('End time must be after start time'); return; }
-    const workingDays = form.workingDays.join(', ');
-    const workingHours = form.startTime && form.endTime ? `${form.startTime} - ${form.endTime}` : '';
-    const payload = { name: form.name, workingDays, workingHours };
-    if (editing) {
-      setData(d => d.map(c => c.id === editing.id ? { ...c, ...payload } : c));
-      toast.success('Department updated');
-    } else {
-      setData(d => [...d, { id: `c${Date.now()}`, ...payload }]);
-      toast.success('Department added');
-    }
-    setOpen(false);
+    const payload = {
+      name: form.name,
+      workingDays: form.workingDays.join(', '),
+      workingHours: form.startTime && form.endTime ? `${form.startTime} - ${form.endTime}` : '',
+    };
+    try {
+      if (editing) {
+        const { data: updated } = await clinicsApi.update(editing._id, payload);
+        setData(d => d.map(c => c._id === editing._id ? updated : c));
+        toast.success('Department updated');
+      } else {
+        const { data: created } = await clinicsApi.create(payload);
+        setData(d => [...d, created]);
+        toast.success('Department added');
+      }
+      setOpen(false);
+    } catch { toast.error('Failed to save department'); }
   };
 
-  const handleDelete = (id: string) => {
-    setData(d => d.filter(c => c.id !== id));
-    toast.success('Department deleted');
+  const handleDelete = async (id: string) => {
+    try {
+      await clinicsApi.delete(id);
+      setData(d => d.filter(c => c._id !== id));
+      toast.success('Department deleted');
+    } catch { toast.error('Failed to delete department'); }
   };
 
   return (
@@ -92,15 +103,15 @@ const ClinicsManagement = () => {
           <table className="w-full text-sm">
             <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Department / Specialty</th><th className="text-left py-2 font-medium hidden md:table-cell">Working Days</th><th className="text-left py-2 font-medium hidden lg:table-cell">Hours</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No departments found.</td></tr>}
-              {filtered.map(c => (
-                <tr key={c.id} className="border-b last:border-0">
+              {data.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No departments found.</td></tr>}
+              {data.map(c => (
+                <tr key={c._id} className="border-b last:border-0">
                   <td className="py-2.5 font-medium text-foreground">{c.name}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{c.workingDays}</td>
                   <td className="py-2.5 hidden lg:table-cell text-muted-foreground">{c.workingHours}</td>
                   <td className="py-2.5 text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(c._id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   </td>
                 </tr>
               ))}
@@ -118,32 +129,15 @@ const ClinicsManagement = () => {
               <div className="flex flex-wrap gap-3 mt-2">
                 {ALL_DAYS.map(day => (
                   <div key={day} className="flex items-center gap-1.5">
-                    <Checkbox
-                      id={`clinic-day-${day}`}
-                      checked={form.workingDays.includes(day)}
-                      onCheckedChange={checked =>
-                        setForm(f => ({
-                          ...f,
-                          workingDays: checked
-                            ? [...f.workingDays, day]
-                            : f.workingDays.filter(d => d !== day),
-                        }))
-                      }
-                    />
+                    <Checkbox id={`clinic-day-${day}`} checked={form.workingDays.includes(day)} onCheckedChange={checked => setForm(f => ({ ...f, workingDays: checked ? [...f.workingDays, day] : f.workingDays.filter(d => d !== day) }))} />
                     <label htmlFor={`clinic-day-${day}`} className="text-sm cursor-pointer">{day}</label>
                   </div>
                 ))}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Start Time</Label>
-                <TimePicker value={form.startTime} onChange={v => setForm(f => ({ ...f, startTime: v }))} placeholder="Start time" />
-              </div>
-              <div>
-                <Label>End Time</Label>
-                <TimePicker value={form.endTime} onChange={v => setForm(f => ({ ...f, endTime: v }))} placeholder="End time" minTime={form.startTime} />
-              </div>
+              <div><Label>Start Time</Label><TimePicker value={form.startTime} onChange={v => setForm(f => ({ ...f, startTime: v }))} placeholder="Start time" /></div>
+              <div><Label>End Time</Label><TimePicker value={form.endTime} onChange={v => setForm(f => ({ ...f, endTime: v }))} placeholder="End time" minTime={form.startTime} /></div>
             </div>
           </div>
           <DialogFooter><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>

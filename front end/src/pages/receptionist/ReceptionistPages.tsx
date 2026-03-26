@@ -1,25 +1,32 @@
-import { useState } from 'react';
-import { appointments as initialAppts, patients, doctors, clinics, Appointment, Patient } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { appointmentsApi, patientsApi, doctorsApi, clinicsApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { StatusBadge } from '@/components/StatusBadge';
-import { UserPlus, CalendarPlus, Calendar, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link, useLocation } from 'react-router-dom';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 
 export const ReceptionistDashboard = () => {
-  const pending = initialAppts.filter(a => a.status === 'pending');
+  const [appts, setAppts] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
+
+  useEffect(() => {
+    appointmentsApi.getAll({ status: 'pending' }).then(r => setAppts(r.data)).catch(() => {});
+    patientsApi.getAll().then(r => setPatients(r.data)).catch(() => {});
+    doctorsApi.getAll().then(r => setDoctors(r.data)).catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-6">
       <div><h2 className="font-display text-2xl font-bold text-foreground">Receptionist Dashboard</h2><p className="text-sm text-muted-foreground">Manage patients and appointments.</p></div>
       <div className="grid sm:grid-cols-3 gap-4">
-        <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-primary">{pending.length}</div><div className="text-xs text-muted-foreground mt-1">Upcoming Appointments</div></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-primary">{appts.length}</div><div className="text-xs text-muted-foreground mt-1">Upcoming Appointments</div></CardContent></Card>
         <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-info">{patients.length}</div><div className="text-xs text-muted-foreground mt-1">Total Patients</div></CardContent></Card>
         <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-success">{doctors.length}</div><div className="text-xs text-muted-foreground mt-1">Doctors Available</div></CardContent></Card>
       </div>
@@ -30,16 +37,16 @@ export const ReceptionistDashboard = () => {
             <table className="w-full text-sm">
               <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Patient</th><th className="text-left py-2 font-medium">Doctor</th><th className="text-left py-2 font-medium hidden md:table-cell">Department</th><th className="text-left py-2 font-medium">Date</th><th className="text-left py-2 font-medium">Status</th></tr></thead>
               <tbody>
-                {pending.map(a => (
-                  <tr key={a.id} className="border-b last:border-0">
-                    <td className="py-2.5 font-medium text-foreground">{patients.find(p => p.id === a.patientId)?.name}</td>
-                    <td className="py-2.5">{doctors.find(d => d.id === a.doctorId)?.name}</td>
-                    <td className="py-2.5 hidden md:table-cell text-muted-foreground">{clinics.find(c => c.id === a.clinicId)?.name}</td>
+                {appts.map(a => (
+                  <tr key={a._id} className="border-b last:border-0">
+                    <td className="py-2.5 font-medium text-foreground">{a.patientId?.name || '—'}</td>
+                    <td className="py-2.5">{a.doctorId?.name || '—'}</td>
+                    <td className="py-2.5 hidden md:table-cell text-muted-foreground">{a.clinicId?.name || '—'}</td>
                     <td className="py-2.5">{a.date} {a.time}</td>
                     <td className="py-2.5"><StatusBadge status={a.status} /></td>
                   </tr>
                 ))}
-                {pending.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No upcoming appointments.</td></tr>}
+                {appts.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No upcoming appointments.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -53,11 +60,18 @@ export const AddPatientPage = () => {
   const emptyForm = { name: '', age: '', gender: '', phone: '', email: '', address: '', username: '', password: '' };
   const [form, setForm] = useState(emptyForm);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required'); return; }
-    toast.success('Patient account created successfully');
-    setForm(emptyForm);
+    try {
+      const { data: patient } = await patientsApi.create({ name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address });
+      if (form.username && form.password) {
+        const { usersApi: ua } = await import('@/lib/api');
+        await ua.register({ username: form.username, password: form.password, role: 'patient', name: form.name, email: form.email, linkedId: patient._id });
+      }
+      toast.success('Patient account created successfully');
+      setForm(emptyForm);
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to create patient'); }
   };
 
   return (
@@ -91,14 +105,27 @@ export const AddPatientPage = () => {
 
 export const BookAppointmentPage = () => {
   const [form, setForm] = useState({ patientId: '', clinicId: '', doctorId: '', date: '', time: '' });
+  const [patients, setPatients] = useState<any[]>([]);
+  const [clinics, setClinics] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
 
-  const filteredDoctors = doctors.filter(d => !form.clinicId || d.clinicId === form.clinicId);
+  useEffect(() => {
+    patientsApi.getAll().then(r => setPatients(r.data)).catch(() => {});
+    clinicsApi.getAll().then(r => setClinics(r.data)).catch(() => {});
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    doctorsApi.getAll({ clinicId: form.clinicId || undefined }).then(r => setDoctors(r.data)).catch(() => {});
+  }, [form.clinicId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.patientId || !form.doctorId || !form.date || !form.time) { toast.error('All fields are required'); return; }
-    toast.success('Appointment booked successfully');
-    setForm({ patientId: '', clinicId: '', doctorId: '', date: '', time: '' });
+    try {
+      await appointmentsApi.create({ patientId: form.patientId, doctorId: form.doctorId, clinicId: form.clinicId, date: form.date, time: form.time });
+      toast.success('Appointment booked successfully');
+      setForm({ patientId: '', clinicId: '', doctorId: '', date: '', time: '' });
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to book appointment'); }
   };
 
   return (
@@ -111,39 +138,26 @@ export const BookAppointmentPage = () => {
               <Label>Patient</Label>
               <Select value={form.patientId} onValueChange={v => setForm(f => ({ ...f, patientId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                <SelectContent>{patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{patients.map(p => <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>Department</Label>
               <Select value={form.clinicId} onValueChange={v => setForm(f => ({ ...f, clinicId: v, doctorId: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                <SelectContent>{clinics.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{clinics.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>Doctor</Label>
               <Select value={form.doctorId} onValueChange={v => setForm(f => ({ ...f, doctorId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                <SelectContent>{filteredDoctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name} — {d.specialization}</SelectItem>)}</SelectContent>
+                <SelectContent>{doctors.map(d => <SelectItem key={d._id} value={d._id}>{d.name} — {d.specialization}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Date</Label>
-                <DatePicker
-                  value={form.date}
-                  onChange={v => setForm(f => ({ ...f, date: v }))}
-                  disabled={d => d < new Date(new Date().setHours(0, 0, 0, 0))}
-                />
-              </div>
-              <div>
-                <Label>Time</Label>
-                <TimePicker
-                  value={form.time}
-                  onChange={v => setForm(f => ({ ...f, time: v }))}
-                />
-              </div>
+              <div><Label>Date</Label><DatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} disabled={d => d < new Date(new Date().setHours(0, 0, 0, 0))} /></div>
+              <div><Label>Time</Label><TimePicker value={form.time} onChange={v => setForm(f => ({ ...f, time: v }))} /></div>
             </div>
             <Button type="submit" className="w-full gradient-primary border-0 text-primary-foreground">Book Appointment</Button>
           </form>
@@ -154,12 +168,14 @@ export const BookAppointmentPage = () => {
 };
 
 export const ReceptionAppointmentsPage = () => {
+  const [appts, setAppts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const all = initialAppts;
-  const filtered = all.filter(a => {
-    const pName = patients.find(p => p.id === a.patientId)?.name || '';
-    return pName.toLowerCase().includes(search.toLowerCase());
-  });
+
+  useEffect(() => {
+    appointmentsApi.getAll().then(r => setAppts(r.data)).catch(() => {});
+  }, []);
+
+  const filtered = appts.filter(a => (a.patientId?.name || '').toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6">
@@ -174,10 +190,10 @@ export const ReceptionAppointmentsPage = () => {
             <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Patient</th><th className="text-left py-2 font-medium">Doctor</th><th className="text-left py-2 font-medium hidden md:table-cell">Department</th><th className="text-left py-2 font-medium">Date</th><th className="text-left py-2 font-medium">Status</th></tr></thead>
             <tbody>
               {filtered.map(a => (
-                <tr key={a.id} className="border-b last:border-0">
-                  <td className="py-2.5 font-medium text-foreground">{patients.find(p => p.id === a.patientId)?.name}</td>
-                  <td className="py-2.5">{doctors.find(d => d.id === a.doctorId)?.name}</td>
-                  <td className="py-2.5 hidden md:table-cell text-muted-foreground">{clinics.find(c => c.id === a.clinicId)?.name}</td>
+                <tr key={a._id} className="border-b last:border-0">
+                  <td className="py-2.5 font-medium text-foreground">{a.patientId?.name || '—'}</td>
+                  <td className="py-2.5">{a.doctorId?.name || '—'}</td>
+                  <td className="py-2.5 hidden md:table-cell text-muted-foreground">{a.clinicId?.name || '—'}</td>
                   <td className="py-2.5">{a.date} {a.time}</td>
                   <td className="py-2.5"><StatusBadge status={a.status} /></td>
                 </tr>

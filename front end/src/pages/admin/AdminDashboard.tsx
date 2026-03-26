@@ -1,16 +1,33 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { clinics, doctors, patients, appointments, receptionists } from '@/data/mockData';
+import { clinicsApi, doctorsApi, patientsApi, receptionistsApi, appointmentsApi } from '@/lib/api';
 import { Building2, Stethoscope, Users, UserPlus, Calendar } from 'lucide-react';
 
-const stats = [
-  { label: 'Departments', value: clinics.length, icon: Building2, color: 'text-primary' },
-  { label: 'Doctors', value: doctors.length, icon: Stethoscope, color: 'text-info' },
-  { label: 'Patients', value: patients.length, icon: Users, color: 'text-success' },
-  { label: 'Receptionists', value: receptionists.length, icon: UserPlus, color: 'text-warning' },
-  { label: 'Appointments', value: appointments.length, icon: Calendar, color: 'text-primary' },
-];
-
 const AdminDashboard = () => {
+  const [stats, setStats] = useState({ clinics: 0, doctors: 0, patients: 0, receptionists: 0, appointments: 0 });
+  const [recentAppts, setRecentAppts] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      clinicsApi.getAll(),
+      doctorsApi.getAll(),
+      patientsApi.getAll(),
+      receptionistsApi.getAll(),
+      appointmentsApi.getAll(),
+    ]).then(([c, d, p, r, a]) => {
+      setStats({ clinics: c.data.length, doctors: d.data.length, patients: p.data.length, receptionists: r.data.length, appointments: a.data.length });
+      setRecentAppts(a.data.slice(0, 5));
+    }).catch(() => {});
+  }, []);
+
+  const statCards = [
+    { label: 'Departments', value: stats.clinics, icon: Building2, color: 'text-primary' },
+    { label: 'Doctors', value: stats.doctors, icon: Stethoscope, color: 'text-info' },
+    { label: 'Patients', value: stats.patients, icon: Users, color: 'text-success' },
+    { label: 'Receptionists', value: stats.receptionists, icon: UserPlus, color: 'text-warning' },
+    { label: 'Appointments', value: stats.appointments, icon: Calendar, color: 'text-primary' },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -18,7 +35,7 @@ const AdminDashboard = () => {
         <p className="text-muted-foreground text-sm">Manage your entire medical center.</p>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {stats.map(s => (
+        {statCards.map(s => (
           <Card key={s.label} className="shadow-card">
             <CardContent className="pt-5 pb-4 flex flex-col items-center text-center">
               <s.icon className={`w-6 h-6 mb-2 ${s.color}`} />
@@ -42,10 +59,10 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {appointments.slice(0, 5).map(a => (
-                  <tr key={a.id} className="border-b last:border-0">
-                    <td className="py-2.5">{patients.find(p => p.id === a.patientId)?.name}</td>
-                    <td className="py-2.5">{doctors.find(d => d.id === a.doctorId)?.name}</td>
+                {recentAppts.map(a => (
+                  <tr key={a._id} className="border-b last:border-0">
+                    <td className="py-2.5">{a.patientId?.name || '—'}</td>
+                    <td className="py-2.5">{a.doctorId?.name || '—'}</td>
                     <td className="py-2.5">{a.date} {a.time}</td>
                     <td className="py-2.5">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${a.status === 'completed' ? 'bg-success/15 text-success' : a.status === 'cancelled' ? 'bg-destructive/15 text-destructive' : 'bg-warning/15 text-warning'}`}>
@@ -54,6 +71,9 @@ const AdminDashboard = () => {
                     </td>
                   </tr>
                 ))}
+                {recentAppts.length === 0 && (
+                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No appointments yet.</td></tr>
+                )}
               </tbody>
             </table>
           </div>

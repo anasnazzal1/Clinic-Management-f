@@ -17,11 +17,12 @@ interface NavItem {
 
 const navItems: Record<string, NavItem[]> = {
   admin: [
-    { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { label: 'Departments', path: '/admin/clinics', icon: Building2 },
-    { label: 'Doctors', path: '/admin/doctors', icon: Stethoscope },
-    { label: 'Patients', path: '/admin/patients', icon: Users },
-    { label: 'Receptionists', path: '/admin/receptionists', icon: UserPlus },
+    { label: 'Dashboard',      path: '/admin',                icon: LayoutDashboard },
+    { label: 'Departments',    path: '/admin/clinics',        icon: Building2 },
+    { label: 'Doctors',        path: '/admin/doctors',        icon: Stethoscope },
+    { label: 'Patients',       path: '/admin/patients',       icon: Users },
+    { label: 'Receptionists',  path: '/admin/receptionists',  icon: UserPlus },
+    { label: 'Appointments',   path: '/admin/appointments',   icon: Calendar },
   ],
   doctor: [
     { label: 'Dashboard', path: '/doctor', icon: LayoutDashboard },

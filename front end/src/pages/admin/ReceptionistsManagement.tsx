@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { receptionists as initialData, Receptionist } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { receptionistsApi, usersApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,31 +9,43 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ReceptionistsManagement = () => {
-  const [data, setData] = useState<Receptionist[]>([...initialData]);
+  const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Receptionist | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const emptyForm = { name: '', phone: '', email: '', username: '', password: '' };
   const [form, setForm] = useState(emptyForm);
 
-  const filtered = data.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
+  const load = () => receptionistsApi.getAll(search || undefined).then(r => setData(r.data)).catch(() => {});
+  useEffect(() => { load(); }, [search]);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
-  const openEdit = (r: Receptionist) => { setEditing(r); setForm({ name: r.name, phone: r.phone, email: r.email, username: '', password: '' }); setOpen(true); };
+  const openEdit = (r: any) => { setEditing(r); setForm({ name: r.name, phone: r.phone || '', email: r.email || '', username: '', password: '' }); setOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required'); return; }
-    if (editing) {
-      setData(d => d.map(r => r.id === editing.id ? { ...r, name: form.name, phone: form.phone, email: form.email } : r));
-      toast.success('Receptionist updated');
-    } else {
-      setData(d => [...d, { id: `r${Date.now()}`, name: form.name, phone: form.phone, email: form.email }]);
-      toast.success('Receptionist added');
-    }
-    setOpen(false);
+    const payload = { name: form.name, phone: form.phone, email: form.email };
+    try {
+      if (editing) {
+        const { data: updated } = await receptionistsApi.update(editing._id, payload);
+        setData(d => d.map(r => r._id === editing._id ? updated : r));
+        toast.success('Receptionist updated');
+      } else {
+        const { data: created } = await receptionistsApi.create(payload);
+        if (form.username && form.password) {
+          await usersApi.register({ username: form.username, password: form.password, role: 'receptionist', name: form.name, email: form.email, linkedId: created._id });
+        }
+        setData(d => [...d, created]);
+        toast.success('Receptionist added');
+      }
+      setOpen(false);
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save receptionist'); }
   };
 
-  const handleDelete = (id: string) => { setData(d => d.filter(r => r.id !== id)); toast.success('Receptionist deleted'); };
+  const handleDelete = async (id: string) => {
+    try { await receptionistsApi.delete(id); setData(d => d.filter(r => r._id !== id)); toast.success('Receptionist deleted'); }
+    catch { toast.error('Failed to delete receptionist'); }
+  };
 
   return (
     <div className="space-y-6">
@@ -50,15 +62,15 @@ const ReceptionistsManagement = () => {
           <table className="w-full text-sm">
             <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Name</th><th className="text-left py-2 font-medium">Phone</th><th className="text-left py-2 font-medium hidden md:table-cell">Email</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No receptionists found.</td></tr>}
-              {filtered.map(r => (
-                <tr key={r.id} className="border-b last:border-0">
+              {data.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No receptionists found.</td></tr>}
+              {data.map(r => (
+                <tr key={r._id} className="border-b last:border-0">
                   <td className="py-2.5 font-medium text-foreground">{r.name}</td>
                   <td className="py-2.5 text-muted-foreground">{r.phone}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{r.email}</td>
                   <td className="py-2.5 text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(r._id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   </td>
                 </tr>
               ))}
