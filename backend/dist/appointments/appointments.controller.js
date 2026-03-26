@@ -145,7 +145,10 @@ let AppointmentsController = class AppointmentsController {
             .populate('doctorId', 'name specialization')
             .populate('clinicId', 'name');
     }
-    create(dto) {
+    create(dto, req) {
+        if (req.user.role === 'doctor') {
+            dto.doctorId = req.user.linkedId;
+        }
         return this.model.create(dto);
     }
     update(id, dto) {
@@ -180,10 +183,11 @@ __decorate([
 ], AppointmentsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, roles_decorator_1.Roles)('admin', 'receptionist'),
+    (0, roles_decorator_1.Roles)('admin', 'receptionist', 'doctor'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CreateAppointmentDto]),
+    __metadata("design:paramtypes", [CreateAppointmentDto, Object]),
     __metadata("design:returntype", void 0)
 ], AppointmentsController.prototype, "create", null);
 __decorate([

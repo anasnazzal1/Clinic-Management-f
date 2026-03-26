@@ -78,6 +78,7 @@ export const visitsApi = {
 // Users (admin)
 export const usersApi = {
   getAll: (role?: string) => api.get('/users', { params: { role } }),
+  getByLinkedId: (linkedId: string) => api.get(`/users/by-linked/${linkedId}`),
   create: (data: any) => api.post('/users', data),
   update: (id: string, data: any) => api.put(`/users/${id}`, data),
   delete: (id: string) => api.delete(`/users/${id}`),

@@ -48,7 +48,7 @@ export declare class AppointmentsController {
     } & {
         id: string;
     }, {}, Appointment, "findOne", {}>;
-    create(dto: CreateAppointmentDto): Promise<import("mongoose").Document<unknown, {}, Appointment, {}, import("mongoose").DefaultSchemaOptions> & Appointment & Required<{
+    create(dto: CreateAppointmentDto, req: any): Promise<import("mongoose").Document<unknown, {}, Appointment, {}, import("mongoose").DefaultSchemaOptions> & Appointment & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
         __v: number;

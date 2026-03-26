@@ -41,10 +41,14 @@ class RegisterDto {
 }
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(4, { message: 'Username must be at least 4 characters.' }),
+    (0, class_validator_1.Matches)(/^\S+$/, { message: 'Username must not contain spaces.' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "username", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6, { message: 'Password must be at least 6 characters.' }),
+    (0, class_validator_1.Matches)(/^(?=.*[a-zA-Z])(?=.*[0-9])/, { message: 'Password must contain at least 1 letter and 1 number.' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "password", void 0);
 __decorate([
@@ -87,7 +91,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('register'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('admin'),
+    (0, roles_decorator_1.Roles)('admin', 'receptionist'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [RegisterDto]),

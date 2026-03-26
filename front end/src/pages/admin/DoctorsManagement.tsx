@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { doctorsApi, clinicsApi, usersApi } from '@/lib/api';
+import { validateCredentials, hasCredentialErrors, type CredentialErrors } from '@/lib/validateCredentials';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import { toast } from 'sonner';
 import { TimePicker } from '@/components/ui/time-picker';
 
@@ -36,38 +38,92 @@ function parseTime(str: string): string {
   return `${String(h).padStart(2, '0')}:${min}`;
 }
 
+const emptyForm = {
+  name: '', specialization: '', phone: '', email: '', clinicId: '',
+  workingDays: [] as string[], startTime: '', endTime: '',
+  username: '', password: '',
+  linkedUserId: '',   // _id of the User document linked to this doctor
+};
+
 const DoctorsManagement = () => {
   const [data, setData] = useState<any[]>([]);
   const [clinics, setClinics] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const emptyForm = { name: '', specialization: '', phone: '', email: '', clinicId: '', workingDays: [] as string[], startTime: '', endTime: '', username: '', password: '' };
   const [form, setForm] = useState(emptyForm);
+  const [credErrors, setCredErrors] = useState<CredentialErrors>({});
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   const load = () => {
     doctorsApi.getAll({ search: search || undefined }).then(r => setData(r.data)).catch(() => {});
     clinicsApi.getAll().then(r => setClinics(r.data)).catch(() => {});
   };
-
   useEffect(() => { load(); }, [search]);
 
-  const openAdd = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
-  const openEdit = (d: any) => {
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setCredErrors({}); setOpen(true); };
+  const openEdit = async (d: any) => {
     const [startRaw, endRaw] = (d.workingHours || '').split(' - ');
+    // Pre-fill doctor fields immediately so the dialog opens fast
     setEditing(d);
-    setForm({ name: d.name, specialization: d.specialization, phone: d.phone || '', email: d.email || '', clinicId: d.clinicId?._id || d.clinicId || '', workingDays: parseDays(d.workingDays || ''), startTime: parseTime(startRaw?.trim() || ''), endTime: parseTime(endRaw?.trim() || ''), username: '', password: '' });
+    setForm({
+      name: d.name, specialization: d.specialization, phone: d.phone || '',
+      email: d.email || '', clinicId: d.clinicId?._id || d.clinicId || '',
+      workingDays: parseDays(d.workingDays || ''),
+      startTime: parseTime(startRaw?.trim() || ''), endTime: parseTime(endRaw?.trim() || ''),
+      username: '', password: '', linkedUserId: '',
+    });
+    setCredErrors({});
     setOpen(true);
+    // Fetch linked user in background and fill username once resolved
+    try {
+      const { data: linkedUser } = await usersApi.getByLinkedId(d._id);
+      if (linkedUser) {
+        setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id }));
+      }
+    } catch { /* no linked user — leave fields empty */ }
   };
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.specialization.trim()) { toast.error('Name and specialization are required'); return; }
     if (form.startTime && form.endTime && form.endTime <= form.startTime) { toast.error('End time must be after start time'); return; }
-    const payload = { name: form.name, specialization: form.specialization, phone: form.phone, email: form.email, clinicId: form.clinicId || undefined, workingDays: form.workingDays.join(', '), workingHours: form.startTime && form.endTime ? `${form.startTime} - ${form.endTime}` : '' };
+
+    if (!editing) {
+      // Credentials are optional for doctors, but if either field is filled both must be valid
+      const hasAny = !!(form.username || form.password);
+      const errors = validateCredentials(form.username, form.password, hasAny);
+      setCredErrors(errors);
+      if (hasCredentialErrors(errors)) return;
+    } else {
+      // On edit: validate only if something was changed
+      const usernameChanged = form.username !== (form.linkedUserId ? form.username : '');
+      const hasAny = !!(form.password || usernameChanged);
+      if (hasAny) {
+        const errors = validateCredentials(form.username, form.password, false);
+        setCredErrors(errors);
+        if (hasCredentialErrors(errors)) return;
+      }
+    }
+
+    const payload = {
+      name: form.name, specialization: form.specialization, phone: form.phone,
+      email: form.email, clinicId: form.clinicId || undefined,
+      workingDays: form.workingDays.join(', '),
+      workingHours: form.startTime && form.endTime ? `${form.startTime} - ${form.endTime}` : '',
+    };
     try {
       if (editing) {
         const { data: updated } = await doctorsApi.update(editing._id, payload);
         setData(d => d.map(doc => doc._id === editing._id ? updated : doc));
+        // Update linked user credentials if a user account exists
+        if (form.linkedUserId) {
+          const userPatch: Record<string, string> = {};
+          if (form.username) userPatch.username = form.username;
+          if (form.password) userPatch.password = form.password;
+          if (Object.keys(userPatch).length > 0) {
+            await usersApi.update(form.linkedUserId, userPatch);
+          }
+        }
         toast.success('Doctor updated');
       } else {
         const { data: created } = await doctorsApi.create(payload);
@@ -81,9 +137,18 @@ const DoctorsManagement = () => {
     } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save doctor'); }
   };
 
-  const handleDelete = async (id: string) => {
-    try { await doctorsApi.delete(id); setData(d => d.filter(doc => doc._id !== id)); toast.success('Doctor deleted'); }
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try { await doctorsApi.delete(deleteTarget._id); setData(d => d.filter(doc => doc._id !== deleteTarget._id)); toast.success('Doctor deleted'); }
     catch { toast.error('Failed to delete doctor'); }
+    finally { setDeleteTarget(null); }
+  };
+
+  const setField = (key: string, value: string) => {
+    setForm(f => ({ ...f, [key]: value }));
+    if (key === 'username' || key === 'password') {
+      setCredErrors(e => ({ ...e, [key]: undefined }));
+    }
   };
 
   return (
@@ -110,7 +175,7 @@ const DoctorsManagement = () => {
                   <td className="py-2.5 hidden lg:table-cell text-muted-foreground">{d.workingDays} • {d.workingHours}</td>
                   <td className="py-2.5 text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(d._id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(d)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   </td>
                 </tr>
               ))}
@@ -118,15 +183,16 @@ const DoctorsManagement = () => {
           </table>
         </CardContent>
       </Card>
+
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editing ? 'Edit' : 'Add'} Doctor</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Full Name</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div><Label>Specialization</Label><Input value={form.specialization} onChange={e => setForm(f => ({ ...f, specialization: e.target.value }))} /></div>
+            <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
+            <div><Label>Specialization</Label><Input value={form.specialization} onChange={e => setField('specialization', e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-              <div><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
+              <div><Label>Email</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
             </div>
             <div>
               <Label>Department</Label>
@@ -150,12 +216,79 @@ const DoctorsManagement = () => {
               <div><Label>Start Time</Label><TimePicker value={form.startTime} onChange={v => setForm(f => ({ ...f, startTime: v }))} placeholder="Start time" /></div>
               <div><Label>End Time</Label><TimePicker value={form.endTime} onChange={v => setForm(f => ({ ...f, endTime: v }))} placeholder="End time" minTime={form.startTime} /></div>
             </div>
-            {!editing && (
+
+            {editing ? (
+              // ── Edit mode: show credentials section only if a linked user exists or after fetch
               <>
-                <div className="border-t pt-4"><p className="text-sm font-medium text-foreground mb-2">Login Credentials (optional)</p></div>
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-foreground mb-1">Login Credentials</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {form.linkedUserId
+                      ? 'Username is pre-filled. Leave password empty to keep it unchanged.'
+                      : 'No user account linked to this doctor yet.'}
+                  </p>
+                </div>
+                {form.linkedUserId && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>Username</Label>
+                      <Input
+                        value={form.username}
+                        onChange={e => setField('username', e.target.value)}
+                        className={credErrors.username ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {credErrors.username && (
+                        <p className="text-xs text-destructive">{credErrors.username}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label>New Password <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                      <Input
+                        type="password"
+                        value={form.password}
+                        onChange={e => setField('password', e.target.value)}
+                        placeholder="Leave empty to keep current"
+                        className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      />
+                      {credErrors.password && (
+                        <p className="text-xs text-destructive">{credErrors.password}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-foreground mb-1">Login Credentials <span className="text-muted-foreground font-normal">(optional)</span></p>
+                  <p className="text-xs text-muted-foreground mb-3">If provided, both fields are required and must meet the rules below.</p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Username</Label><Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} /></div>
-                  <div><Label>Password</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} /></div>
+                  <div className="space-y-1">
+                    <Label>Username</Label>
+                    <Input
+                      value={form.username}
+                      onChange={e => setField('username', e.target.value)}
+                      className={credErrors.username ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      placeholder="min. 4 chars, no spaces"
+                    />
+                    {credErrors.username && (
+                      <p className="text-xs text-destructive">{credErrors.username}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Password</Label>
+                    <Input
+                      type="password"
+                      value={form.password}
+                      onChange={e => setField('password', e.target.value)}
+                      className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
+                      placeholder="min. 6 chars, letter + number"
+                    />
+                    {credErrors.password && (
+                      <p className="text-xs text-destructive">{credErrors.password}</p>
+                    )}
+                  </div>
                 </div>
               </>
             )}
@@ -163,6 +296,13 @@ const DoctorsManagement = () => {
           <DialogFooter><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        itemLabel={deleteTarget?.name}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

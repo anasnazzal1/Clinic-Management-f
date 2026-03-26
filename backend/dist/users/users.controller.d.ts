@@ -24,6 +24,19 @@ export declare class UsersController {
     } & {
         id: string;
     }, {}, User, "find", {}>;
+    findByLinkedId(linkedId: string): import("mongoose").Query<(import("mongoose").Document<unknown, {}, User, {}, import("mongoose").DefaultSchemaOptions> & User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }) | null, import("mongoose").Document<unknown, {}, User, {}, import("mongoose").DefaultSchemaOptions> & User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }, {}, User, "findOne", {}>;
     findOne(id: string): import("mongoose").Query<(import("mongoose").Document<unknown, {}, User, {}, import("mongoose").DefaultSchemaOptions> & User & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {

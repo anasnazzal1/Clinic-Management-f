@@ -97,6 +97,9 @@ let UsersController = class UsersController {
         const filter = role ? { role } : {};
         return this.model.find(filter).select('-password');
     }
+    findByLinkedId(linkedId) {
+        return this.model.findOne({ linkedId }).select('-password');
+    }
     findOne(id) {
         return this.model.findById(id).select('-password');
     }
@@ -123,6 +126,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('by-linked/:linkedId'),
+    __param(0, (0, common_1.Param)('linkedId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findByLinkedId", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

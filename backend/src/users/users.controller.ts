@@ -29,6 +29,11 @@ export class UsersController {
     return this.model.find(filter).select('-password');
   }
 
+  @Get('by-linked/:linkedId')
+  findByLinkedId(@Param('linkedId') linkedId: string) {
+    return this.model.findOne({ linkedId }).select('-password');
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.model.findById(id).select('-password');

@@ -12,6 +12,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { Plus, Pencil, Trash2, Search, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 
 interface Appointment {
   _id: string;
@@ -54,6 +55,7 @@ const AdminAppointments = () => {
   const [editing, setEditing]         = useState<Appointment | null>(null);
   const [form, setForm]               = useState(emptyForm);
   const [saving, setSaving]           = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Appointment | null>(null);
 
   // ── Load reference data once ──────────────────────────────────────────────
   useEffect(() => {
@@ -169,13 +171,16 @@ const AdminAppointments = () => {
   };
 
   // ── Soft delete ───────────────────────────────────────────────────────────
-  const handleDelete = async (a: Appointment) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await appointmentsApi.delete(a._id);
-      setAppointments(prev => prev.map(x => x._id === a._id ? { ...x, status: 'deleted' } : x));
+      await appointmentsApi.delete(deleteTarget._id);
+      setAppointments(prev => prev.map(x => x._id === deleteTarget._id ? { ...x, status: 'deleted' as AppointmentStatus } : x));
       toast.success('Appointment marked as deleted');
     } catch {
       toast.error('Failed to delete appointment');
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -302,7 +307,7 @@ const AdminAppointments = () => {
                       </Button>
                       <Button
                         variant="ghost" size="icon"
-                        onClick={() => handleDelete(a)}
+                        onClick={() => setDeleteTarget(a)}
                         disabled={a.status === 'deleted'}
                         className="text-destructive hover:text-destructive"
                         title="Soft delete"
@@ -439,6 +444,13 @@ const AdminAppointments = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        itemLabel={`appointment for ${deleteTarget?.patientId?.name ?? 'this patient'}`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

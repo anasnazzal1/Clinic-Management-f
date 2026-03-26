@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { appointmentsApi, patientsApi, doctorsApi, clinicsApi } from '@/lib/api';
+import { validateCredentials, hasCredentialErrors, type CredentialErrors } from '@/lib/validateCredentials';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,18 +60,28 @@ export const ReceptionistDashboard = () => {
 export const AddPatientPage = () => {
   const emptyForm = { name: '', age: '', gender: '', phone: '', email: '', address: '', username: '', password: '' };
   const [form, setForm] = useState(emptyForm);
+  const [credErrors, setCredErrors] = useState<CredentialErrors>({});
+
+  const setField = (key: string, value: string) => {
+    setForm(f => ({ ...f, [key]: value }));
+    if (key === 'username' || key === 'password') {
+      setCredErrors(e => ({ ...e, [key]: undefined }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required'); return; }
+    const errors = validateCredentials(form.username, form.password, true);
+    setCredErrors(errors);
+    if (hasCredentialErrors(errors)) return;
     try {
       const { data: patient } = await patientsApi.create({ name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address });
-      if (form.username && form.password) {
-        const { usersApi: ua } = await import('@/lib/api');
-        await ua.register({ username: form.username, password: form.password, role: 'patient', name: form.name, email: form.email, linkedId: patient._id });
-      }
+      const { usersApi: ua } = await import('@/lib/api');
+      await ua.register({ username: form.username, password: form.password, role: 'patient', name: form.name, email: form.email, linkedId: patient._id });
       toast.success('Patient account created successfully');
       setForm(emptyForm);
+      setCredErrors({});
     } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to create patient'); }
   };
 
@@ -80,20 +91,52 @@ export const AddPatientPage = () => {
       <Card className="shadow-card">
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div><Label>Full Name</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+            <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} required /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Age</Label><Input type="number" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} /></div>
-              <div><Label>Gender</Label><Input value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} placeholder="Male / Female" /></div>
+              <div><Label>Age</Label><Input type="number" value={form.age} onChange={e => setField('age', e.target.value)} /></div>
+              <div><Label>Gender <span className="text-destructive">*</span></Label>
+                <Select value={form.gender} onValueChange={v => setField('gender', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-              <div><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
+              <div><Label>Email</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
             </div>
-            <div><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
-            <div className="border-t pt-4"><p className="text-sm font-medium text-foreground mb-2">Login Credentials</p></div>
+            <div><Label>Address</Label><Input value={form.address} onChange={e => setField('address', e.target.value)} /></div>
+            <div className="border-t pt-4">
+              <p className="text-sm font-medium text-foreground mb-1">Login Credentials <span className="text-destructive">*</span></p>
+              <p className="text-xs text-muted-foreground mb-3">Required to give the patient access to the portal.</p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Username</Label><Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
-              <div><Label>Password</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required /></div>
+              <div className="space-y-1">
+                <Label>Username</Label>
+                <Input
+                  value={form.username}
+                  onChange={e => setField('username', e.target.value)}
+                  className={credErrors.username ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  placeholder="min. 4 chars, no spaces"
+                />
+                {credErrors.username && <p className="text-xs text-destructive">{credErrors.username}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={e => setField('password', e.target.value)}
+                  className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  placeholder="min. 6 chars, letter + number"
+                />
+                {credErrors.password && <p className="text-xs text-destructive">{credErrors.password}</p>}
+              </div>
             </div>
             <Button type="submit" className="w-full gradient-primary border-0 text-primary-foreground">Create Patient Account</Button>
           </form>

@@ -66,8 +66,12 @@ export class AppointmentsController {
   }
 
   @Post()
-  @Roles('admin', 'receptionist')
-  create(@Body() dto: CreateAppointmentDto) {
+  @Roles('admin', 'receptionist', 'doctor')
+  create(@Body() dto: CreateAppointmentDto, @Request() req: any) {
+    // Doctors can only book appointments for themselves
+    if (req.user.role === 'doctor') {
+      dto.doctorId = req.user.linkedId;
+    }
     return this.model.create(dto);
   }
 
