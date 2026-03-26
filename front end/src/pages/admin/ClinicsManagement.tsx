@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { TimePicker } from '@/components/ui/time-picker';
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -42,6 +43,7 @@ const ClinicsManagement = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const emptyForm = { name: '', workingDays: [] as string[], startTime: '', endTime: '' };
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   const load = () => clinicsApi.getAll(search || undefined).then(r => setData(r.data)).catch(() => {});
 
@@ -77,12 +79,14 @@ const ClinicsManagement = () => {
     } catch { toast.error('Failed to save department'); }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await clinicsApi.delete(id);
-      setData(d => d.filter(c => c._id !== id));
+      await clinicsApi.delete(deleteTarget._id);
+      setData(d => d.filter(c => c._id !== deleteTarget._id));
       toast.success('Department deleted');
     } catch { toast.error('Failed to delete department'); }
+    finally { setDeleteTarget(null); }
   };
 
   return (
@@ -111,7 +115,7 @@ const ClinicsManagement = () => {
                   <td className="py-2.5 hidden lg:table-cell text-muted-foreground">{c.workingHours}</td>
                   <td className="py-2.5 text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(c._id)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(c)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   </td>
                 </tr>
               ))}
@@ -143,6 +147,13 @@ const ClinicsManagement = () => {
           <DialogFooter><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        itemLabel={`the ${deleteTarget?.name} department`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

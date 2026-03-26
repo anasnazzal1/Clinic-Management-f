@@ -86,8 +86,9 @@ export const AddPatientPage = () => {
   };
 
   return (
-    <div className="max-w-lg space-y-6">
-      <div><h2 className="font-display text-2xl font-bold text-foreground">Add New Patient</h2><p className="text-sm text-muted-foreground">Register a new patient with login credentials.</p></div>
+    <div className="flex justify-center px-4 py-6">
+      <div className="w-full max-w-2xl space-y-6">
+        <div><h2 className="font-display text-2xl font-bold text-foreground">Add New Patient</h2><p className="text-sm text-muted-foreground">Register a new patient with login credentials.</p></div>
       <Card className="shadow-card">
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -142,6 +143,7 @@ export const AddPatientPage = () => {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
@@ -172,8 +174,9 @@ export const BookAppointmentPage = () => {
   };
 
   return (
-    <div className="max-w-lg space-y-6">
-      <div><h2 className="font-display text-2xl font-bold text-foreground">Book Appointment</h2><p className="text-sm text-muted-foreground">Schedule a new appointment for a patient.</p></div>
+    <div className="flex justify-center px-4 py-6">
+      <div className="w-full max-w-2xl space-y-6">
+        <div><h2 className="font-display text-2xl font-bold text-foreground">Book Appointment</h2><p className="text-sm text-muted-foreground">Schedule a new appointment for a patient.</p></div>
       <Card className="shadow-card">
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -206,6 +209,7 @@ export const BookAppointmentPage = () => {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

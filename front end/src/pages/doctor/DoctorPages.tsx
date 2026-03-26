@@ -17,18 +17,58 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   CheckCircle2, XCircle, CalendarPlus, User, Stethoscope,
-  Clock, FileText, TriangleAlert, Calendar,
+  Clock, FileText, TriangleAlert, Calendar, Search, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const DoctorDashboard = () => {
   const { user } = useAuth();
-  const [appts, setAppts] = useState<any[]>([]);
+  const [appts, setAppts]       = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [search, setSearch]     = useState('');
+  const [patientOpen, setPatientOpen]           = useState(false);
+  const [selectedPatient, setSelectedPatient]   = useState<any>(null);
+  const [patientVisits, setPatientVisits]       = useState<any[]>([]);
 
   useEffect(() => {
-    appointmentsApi.getAll().then(r => setAppts(r.data)).catch(() => {});
+    appointmentsApi.getAll().then(r => {
+      const data: any[] = r.data;
+      setAppts(data);
+      // Derive unique patients from appointments
+      const seen = new Set<string>();
+      const unique: any[] = [];
+      data.forEach(a => {
+        const p = a.patientId;
+        if (p && !seen.has(p._id ?? p)) {
+          seen.add(p._id ?? p);
+          unique.push(p);
+        }
+      });
+      setPatients(unique);
+    }).catch(() => {});
   }, []);
+
+  const q = search.toLowerCase().trim();
+  const filteredPatients = q
+    ? patients.filter(p =>
+        (p.name  ?? '').toLowerCase().includes(q) ||
+        (p.email ?? '').toLowerCase().includes(q) ||
+        (p.phone ?? '').includes(q)
+      )
+    : patients;
+
+  const openPatient = async (patientId: string) => {
+    try {
+      const [p, v] = await Promise.all([
+        patientsApi.getOne(patientId),
+        visitsApi.getAll({ patientId }),
+      ]);
+      setSelectedPatient(p.data);
+      setPatientVisits(v.data);
+      setPatientOpen(true);
+    } catch { toast.error('Failed to load patient profile.'); }
+  };
 
   const pending   = appts.filter(a => a.status === 'pending');
   const completed = appts.filter(a => a.status === 'completed');
@@ -40,34 +80,83 @@ export const DoctorDashboard = () => {
         <h2 className="font-display text-2xl font-bold text-foreground">Welcome, {user?.name}</h2>
         <p className="text-sm text-muted-foreground">Your appointment overview for today.</p>
       </div>
+
+      {/* Stats */}
       <div className="grid sm:grid-cols-4 gap-4">
-        <Card className="shadow-card">
-          <CardContent className="pt-5 text-center">
-            <div className="font-display text-3xl font-bold text-primary">{appts.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">Total</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="pt-5 text-center">
-            <div className="font-display text-3xl font-bold text-warning">{pending.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">Pending</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="pt-5 text-center">
-            <div className="font-display text-3xl font-bold text-success">{completed.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">Completed</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="pt-5 text-center">
-            <div className="font-display text-3xl font-bold text-destructive">{cancelled.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">Cancelled</div>
-          </CardContent>
-        </Card>
+        <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-primary">{appts.length}</div><div className="text-xs text-muted-foreground mt-1">Total</div></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-warning">{pending.length}</div><div className="text-xs text-muted-foreground mt-1">Pending</div></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-success">{completed.length}</div><div className="text-xs text-muted-foreground mt-1">Completed</div></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-destructive">{cancelled.length}</div><div className="text-xs text-muted-foreground mt-1">Cancelled</div></CardContent></Card>
       </div>
 
-      {/* Today's pending appointments preview */}
+      {/* Patient search */}
+      <Card className="shadow-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-base flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" />
+            My Patients
+            <span className="ml-auto text-xs font-normal text-muted-foreground">
+              {filteredPatients.length} of {patients.length}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9 pr-9"
+              placeholder="Search patients by name, email, or phone..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              autoFocus={false}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Patient list */}
+          {filteredPatients.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              {search ? 'No patients match your search.' : 'No patients yet.'}
+            </p>
+          ) : (
+            <div className="divide-y">
+              {filteredPatients.map(p => (
+                <button
+                  key={p._id ?? p}
+                  onClick={() => openPatient(p._id ?? p)}
+                  className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-muted/40 rounded-lg px-2 transition-colors group"
+                >
+                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary-foreground">
+                      {(p.name ?? '?').split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                      {p.name ?? '—'}
+                    </p>
+                    {p.phone && (
+                      <p className="text-xs text-muted-foreground truncate">{p.phone}</p>
+                    )}
+                  </div>
+                  <User className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upcoming appointments preview */}
       {pending.length > 0 && (
         <Card className="shadow-card">
           <CardHeader className="pb-3">
@@ -99,6 +188,46 @@ export const DoctorDashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Patient profile dialog (reused from appointments page) */}
+      <Dialog open={patientOpen} onOpenChange={setPatientOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" /> Patient Profile
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPatient && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm bg-muted/30 rounded-lg p-3">
+                <div><span className="text-muted-foreground text-xs uppercase tracking-wide">Name</span><p className="font-medium text-foreground mt-0.5">{selectedPatient.name}</p></div>
+                <div><span className="text-muted-foreground text-xs uppercase tracking-wide">Age</span><p className="font-medium text-foreground mt-0.5">{selectedPatient.age}</p></div>
+                <div><span className="text-muted-foreground text-xs uppercase tracking-wide">Gender</span><p className="font-medium text-foreground mt-0.5">{selectedPatient.gender}</p></div>
+                <div><span className="text-muted-foreground text-xs uppercase tracking-wide">Phone</span><p className="font-medium text-foreground mt-0.5">{selectedPatient.phone}</p></div>
+              </div>
+              <div className="border-t pt-4">
+                <h4 className="font-display font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" /> Visit History
+                  <span className="ml-auto text-xs font-normal text-muted-foreground">{patientVisits.length} record{patientVisits.length !== 1 ? 's' : ''}</span>
+                </h4>
+                {patientVisits.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No previous visits.</p>
+                ) : (
+                  <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                    {patientVisits.map(v => (
+                      <div key={v._id} className="rounded-lg border bg-card p-3 text-sm">
+                        <div className="flex justify-between text-muted-foreground text-xs mb-1"><span>{v.date}</span><span>{v.doctorId?.name || '—'}</span></div>
+                        <p className="font-medium text-foreground">{v.diagnosis || '—'}</p>
+                        {v.notes && <p className="text-muted-foreground mt-0.5 text-xs">{v.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -128,6 +257,9 @@ export const DoctorAppointmentsPage = () => {
   const [followUpTarget, setFollowUpTarget] = useState<any>(null);
   const [followUpForm, setFollowUpForm]     = useState({ date: '', time: '' });
   const [savingFollowUp, setSavingFollowUp] = useState(false);
+
+  // Appointment search
+  const [search, setSearch] = useState('');
 
   // Load appointments + doctor info
   useEffect(() => {
@@ -317,7 +449,27 @@ export const DoctorAppointmentsPage = () => {
       )}
 
       <Card className="shadow-card">
-        <CardContent className="pt-4 overflow-x-auto">
+        <CardContent className="pt-4 space-y-3">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9 pr-9"
+              placeholder="Search patients by name..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-muted-foreground">
@@ -329,7 +481,9 @@ export const DoctorAppointmentsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {appts.map(a => (
+              {appts
+                .filter(a => !search || (a.patientId?.name ?? '').toLowerCase().includes(search.toLowerCase()))
+                .map(a => (
                 <tr
                   key={a._id}
                   className={`border-b last:border-0 transition-colors ${
@@ -356,15 +510,16 @@ export const DoctorAppointmentsPage = () => {
                   <td className="py-2.5"><ActionButtons a={a} /></td>
                 </tr>
               ))}
-              {appts.length === 0 && (
+              {appts.filter(a => !search || (a.patientId?.name ?? '').toLowerCase().includes(search.toLowerCase())).length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-muted-foreground">
-                    No appointments found.
+                    {search ? 'No appointments match your search.' : 'No appointments found.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 
