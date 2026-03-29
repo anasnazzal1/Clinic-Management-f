@@ -16,6 +16,9 @@ export declare class AuthService {
             linkedId: string | undefined;
         };
     }>;
+    changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{
+        message: string;
+    }>;
     register(dto: {
         username: string;
         password: string;

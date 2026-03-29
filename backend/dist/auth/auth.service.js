@@ -70,6 +70,17 @@ let AuthService = class AuthService {
             user: { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email, linkedId: user.linkedId },
         };
     }
+    async changePassword(userId, currentPassword, newPassword) {
+        const user = await this.userModel.findById(userId);
+        if (!user)
+            throw new common_1.UnauthorizedException();
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch)
+            throw new common_1.BadRequestException('Current password is incorrect.');
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+        return { message: 'Password updated successfully.' };
+    }
     async register(dto) {
         const exists = await this.userModel.findOne({ username: dto.username });
         if (exists)

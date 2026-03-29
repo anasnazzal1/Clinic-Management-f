@@ -11,6 +11,10 @@ declare class RegisterDto {
     email: string;
     linkedId?: string;
 }
+declare class ChangePasswordDto {
+    currentPassword: string;
+    newPassword: string;
+}
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
@@ -24,6 +28,9 @@ export declare class AuthController {
             email: string;
             linkedId: string | undefined;
         };
+    }>;
+    changePassword(dto: ChangePasswordDto, req: any): Promise<{
+        message: string;
     }>;
     register(dto: RegisterDto): Promise<{
         id: import("mongoose").Types.ObjectId;

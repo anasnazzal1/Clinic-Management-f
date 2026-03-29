@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { appointmentsApi, visitsApi } from '@/lib/api';
+import { appointmentsApi, visitsApi, patientsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
-import { User, Calendar } from 'lucide-react';
+import { User, Calendar, Printer } from 'lucide-react';
+import PatientPrintView from '@/components/PatientPrintView';
 
 export const PatientDashboard = () => {
   const { user } = useAuth();
@@ -61,15 +63,48 @@ export const PatientAppointmentsPage = () => {
 };
 
 export const PatientHistoryPage = () => {
-  const [visits, setVisits] = useState<any[]>([]);
+  const { user } = useAuth();
+  const [visits, setVisits]   = useState<any[]>([]);
+  const [appts, setAppts]     = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     visitsApi.getAll().then(r => setVisits(r.data)).catch(() => {});
-  }, []);
+    appointmentsApi.getAll().then(r => setAppts(r.data)).catch(() => {});
+    if (user?.linkedId) {
+      patientsApi.getOne(user.linkedId).then(r => setProfile(r.data)).catch(() => {});
+    }
+  }, [user?.linkedId]);
+
+  // Build timeline from appointments + visits for the print view
+  const timeline = appts.map(a => {
+    const visit = visits.find(v => (v.appointmentId?._id ?? v.appointmentId) === a._id);
+    return {
+      id: a._id, date: a.date, time: a.time,
+      doctor: a.doctorId, clinic: a.clinicId, status: a.status,
+      diagnosis: visit?.diagnosis || a.diagnosis || '—',
+      notes: visit?.notes || a.notes || '—',
+    };
+  }).sort((a, b) => b.date.localeCompare(a.date));
+
+  const handlePrint = () => {
+    const el = document.getElementById('patient-print-area');
+    if (el) el.style.display = 'block';
+    window.print();
+    if (el) el.style.display = 'none';
+  };
 
   return (
     <div className="space-y-6">
-      <div><h2 className="font-display text-2xl font-bold text-foreground">Medical History</h2><p className="text-sm text-muted-foreground">Your visit records and diagnoses.</p></div>
+      <div className="flex items-center justify-between no-print">
+        <div>
+          <h2 className="font-display text-2xl font-bold text-foreground">Medical History</h2>
+          <p className="text-sm text-muted-foreground">Your visit records and diagnoses.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Printer className="w-4 h-4" /> Print My Profile
+        </Button>
+      </div>
       {visits.length === 0 ? (
         <Card className="shadow-card"><CardContent className="py-12 text-center text-muted-foreground">No medical records found.</CardContent></Card>
       ) : (
@@ -88,6 +123,14 @@ export const PatientHistoryPage = () => {
           ))}
         </div>
       )}
+
+      {/* Hidden print layout — no credentials for patient role */}
+      <PatientPrintView
+        patient={profile ?? { name: user?.name ?? '', email: user?.email ?? '' }}
+        timeline={timeline}
+        credentials={null}
+        printedBy={user?.name}
+      />
     </div>
   );
 };

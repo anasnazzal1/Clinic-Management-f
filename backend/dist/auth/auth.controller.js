@@ -68,6 +68,20 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "linkedId", void 0);
+class ChangePasswordDto {
+    currentPassword;
+    newPassword;
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ChangePasswordDto.prototype, "currentPassword", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6, { message: 'New password must be at least 6 characters.' }),
+    (0, class_validator_1.Matches)(/^(?=.*[a-zA-Z])(?=.*[0-9])/, { message: 'New password must contain at least 1 letter and 1 number.' }),
+    __metadata("design:type", String)
+], ChangePasswordDto.prototype, "newPassword", void 0);
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -75,6 +89,9 @@ let AuthController = class AuthController {
     }
     login(dto) {
         return this.authService.login(dto.username, dto.password);
+    }
+    changePassword(dto, req) {
+        return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
     }
     register(dto) {
         return this.authService.register(dto);
@@ -88,6 +105,15 @@ __decorate([
     __metadata("design:paramtypes", [LoginDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('change-password'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [ChangePasswordDto, Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "changePassword", null);
 __decorate([
     (0, common_1.Post)('register'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   LogOut, Menu, X, Building2, Users, Stethoscope, UserPlus,
-  CalendarPlus, Calendar, ClipboardList, User, FileText, LayoutDashboard
+  CalendarPlus, Calendar, ClipboardList, User, FileText, LayoutDashboard, KeyRound
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,21 +23,25 @@ const navItems: Record<string, NavItem[]> = {
     { label: 'Patients',       path: '/admin/patients',       icon: Users },
     { label: 'Receptionists',  path: '/admin/receptionists',  icon: UserPlus },
     { label: 'Appointments',   path: '/admin/appointments',   icon: Calendar },
+    { label: 'Change Password', path: '/change-password',     icon: KeyRound },
   ],
   doctor: [
-    { label: 'Dashboard', path: '/doctor', icon: LayoutDashboard },
-    { label: 'Appointments', path: '/doctor/appointments', icon: Calendar },
+    { label: 'Dashboard',       path: '/doctor',              icon: LayoutDashboard },
+    { label: 'Appointments',    path: '/doctor/appointments', icon: Calendar },
+    { label: 'Change Password', path: '/change-password',     icon: KeyRound },
   ],
   receptionist: [
-    { label: 'Dashboard', path: '/reception', icon: LayoutDashboard },
-    { label: 'Add Patient', path: '/reception/add-patient', icon: UserPlus },
-    { label: 'Book Appointment', path: '/reception/book', icon: CalendarPlus },
-    { label: 'Appointments', path: '/reception/appointments', icon: Calendar },
+    { label: 'Dashboard',       path: '/reception',                icon: LayoutDashboard },
+    { label: 'Add Patient',     path: '/reception/add-patient',    icon: UserPlus },
+    { label: 'Book Appointment',path: '/reception/book',           icon: CalendarPlus },
+    { label: 'Appointments',    path: '/reception/appointments',   icon: Calendar },
+    { label: 'Change Password', path: '/change-password',          icon: KeyRound },
   ],
   patient: [
-    { label: 'Dashboard', path: '/patient', icon: LayoutDashboard },
-    { label: 'Appointments', path: '/patient/appointments', icon: Calendar },
-    { label: 'Medical History', path: '/patient/history', icon: FileText },
+    { label: 'Dashboard',       path: '/patient',             icon: LayoutDashboard },
+    { label: 'Appointments',    path: '/patient/appointments',icon: Calendar },
+    { label: 'Medical History', path: '/patient/history',     icon: FileText },
+    { label: 'Change Password', path: '/change-password',     icon: KeyRound },
   ],
 };
 

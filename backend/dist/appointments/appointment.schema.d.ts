@@ -28,7 +28,25 @@ export declare const AppointmentSchema: import("mongoose").Schema<Appointment, i
 }, "id"> & {
     id: string;
 }, {
+    date?: import("mongoose").SchemaDefinitionProperty<string, Appointment, Document<unknown, {}, Appointment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Appointment & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     _id?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Appointment, Document<unknown, {}, Appointment, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Appointment & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    clinicId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Appointment, Document<unknown, {}, Appointment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Appointment & Required<{
         _id: Types.ObjectId;
@@ -47,24 +65,6 @@ export declare const AppointmentSchema: import("mongoose").Schema<Appointment, i
         id: string;
     }> | undefined;
     doctorId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Appointment, Document<unknown, {}, Appointment, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Appointment & Required<{
-        _id: Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    clinicId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Appointment, Document<unknown, {}, Appointment, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Appointment & Required<{
-        _id: Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    date?: import("mongoose").SchemaDefinitionProperty<string, Appointment, Document<unknown, {}, Appointment, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Appointment & Required<{
         _id: Types.ObjectId;

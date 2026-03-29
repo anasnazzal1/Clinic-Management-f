@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Roles } from '../common/roles.decorator';
@@ -27,6 +27,15 @@ class RegisterDto {
   @IsOptional() @IsString() linkedId?: string;
 }
 
+class ChangePasswordDto {
+  @IsString() currentPassword: string;
+
+  @IsString()
+  @MinLength(6, { message: 'New password must be at least 6 characters.' })
+  @Matches(/^(?=.*[a-zA-Z])(?=.*[0-9])/, { message: 'New password must contain at least 1 letter and 1 number.' })
+  newPassword: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -34,6 +43,12 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto.username, dto.password);
+  }
+
+  @Post('change-password')
+  @UseGuards(AuthGuard('jwt'))
+  changePassword(@Body() dto: ChangePasswordDto, @Request() req: any) {
+    return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
   }
 
   @Post('register')

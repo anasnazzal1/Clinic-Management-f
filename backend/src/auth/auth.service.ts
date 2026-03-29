@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -22,6 +22,16 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       user: { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email, linkedId: user.linkedId },
     };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new UnauthorizedException();
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) throw new BadRequestException('Current password is incorrect.');
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    return { message: 'Password updated successfully.' };
   }
 
   async register(dto: { username: string; password: string; role: string; name: string; email: string; linkedId?: string }) {

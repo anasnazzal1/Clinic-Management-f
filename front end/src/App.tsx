@@ -19,8 +19,10 @@ import ReceptionistsManagement from "./pages/admin/ReceptionistsManagement";
 import AdminAppointments from "./pages/admin/AdminAppointments";
 
 import { DoctorDashboard, DoctorAppointmentsPage } from "./pages/doctor/DoctorPages";
+import DoctorPatientProfile from "./pages/doctor/DoctorPatientProfile";
 import { ReceptionistDashboard, AddPatientPage, BookAppointmentPage, ReceptionAppointmentsPage } from "./pages/receptionist/ReceptionistPages";
 import { PatientDashboard, PatientAppointmentsPage, PatientHistoryPage } from "./pages/patient/PatientPages";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 import React from "react";
 
 const queryClient = new QueryClient();
@@ -55,6 +57,7 @@ const App = () => (
             {/* Doctor */}
             <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorDashboard /></ProtectedRoute>} />
             <Route path="/doctor/appointments" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorAppointmentsPage /></ProtectedRoute>} />
+            <Route path="/doctor/patients/:id" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorPatientProfile /></ProtectedRoute>} />
 
             {/* Receptionist */}
             <Route path="/reception" element={<ProtectedRoute allowedRoles={['receptionist']}><ReceptionistDashboard /></ProtectedRoute>} />
@@ -68,6 +71,7 @@ const App = () => (
             <Route path="/patient/history" element={<ProtectedRoute allowedRoles={['patient']}><PatientHistoryPage /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
+            <Route path="/change-password" element={<ProtectedRoute allowedRoles={['admin','doctor','receptionist','patient']}><ChangePasswordPage /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

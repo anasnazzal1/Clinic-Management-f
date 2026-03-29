@@ -18,14 +18,18 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    e.stopPropagation();
+    if (!username.trim() || !password) {
+      setError('Please enter both username and password.');
+      return;
+    }
     setLoading(true);
     const success = await login(username, password);
     if (success) {
       const stored = JSON.parse(localStorage.getItem('clinicUser')!);
       navigate(getRolePath(stored.role));
     } else {
-      setError('Invalid username or password');
+      setError('Invalid username or password.');
     }
     setLoading(false);
   };
@@ -59,11 +63,11 @@ const Login = () => {
               )}
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter username" required />
+                <Input id="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Enter username" autoComplete="username" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" required />
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" autoComplete="current-password" />
               </div>
               <Button type="submit" className="w-full gradient-primary border-0 text-primary-foreground" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}

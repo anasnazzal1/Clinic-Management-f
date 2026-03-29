@@ -11,7 +11,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const isAuthEndpoint = err.config?.url?.includes('/auth/login') ||
+                           err.config?.url?.includes('/auth/change-password');
+    if (err.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('clinicUser');
       window.location.href = '/login';
@@ -25,6 +27,8 @@ export default api;
 // Auth
 export const authApi = {
   login: (username: string, password: string) => api.post('/auth/login', { username, password }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // Clinics
