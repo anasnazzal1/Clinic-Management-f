@@ -56,6 +56,7 @@ export declare class UsersController {
         name: string;
         email: string;
         linkedId?: string;
+        profileImage?: string;
         _id: import("mongoose").Types.ObjectId;
         $locals: Record<string, unknown>;
         $op: "save" | "validate" | "remove" | null;
@@ -88,5 +89,19 @@ export declare class UsersController {
     } & {
         id: string;
     }, {}, User, "findOneAndDelete", {}>;
+    uploadImage(id: string, file: Express.Multer.File, req: any): Promise<(import("mongoose").Document<unknown, {}, User, {}, import("mongoose").DefaultSchemaOptions> & User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }) | null>;
+    deleteImage(id: string): Promise<(import("mongoose").Document<unknown, {}, User, {}, import("mongoose").DefaultSchemaOptions> & User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }) | null>;
 }
 export {};

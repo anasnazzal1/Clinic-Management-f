@@ -19,6 +19,7 @@ let Patient = class Patient extends mongoose_2.Document {
     phone;
     email;
     address;
+    profileImage;
 };
 exports.Patient = Patient;
 __decorate([
@@ -45,6 +46,10 @@ __decorate([
     (0, mongoose_1.Prop)(),
     __metadata("design:type", String)
 ], Patient.prototype, "address", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], Patient.prototype, "profileImage", void 0);
 exports.Patient = Patient = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Patient);

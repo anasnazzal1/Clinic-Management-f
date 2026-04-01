@@ -10,9 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
+import AvatarUpload from '@/components/AvatarUpload';
+import Avatar from '@/components/Avatar';
+import InlineAvatarUpload from '@/components/InlineAvatarUpload';
 import { toast } from 'sonner';
 
-const emptyForm = { name: '', age: '', gender: '', phone: '', email: '', address: '', username: '', password: '', linkedUserId: '' };
+const emptyForm = { name: '', age: '', gender: '', phone: '', email: '', address: '', username: '', password: '', linkedUserId: '', linkedUserImage: '' as string | undefined };
 
 const PatientsManagement = () => {
   const [data, setData] = useState<any[]>([]);
@@ -23,19 +26,32 @@ const PatientsManagement = () => {
   const [form, setForm] = useState(emptyForm);
   const [credErrors, setCredErrors] = useState<CredentialErrors>({});
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  // patientId → { userId, profileImage }
+  const [userMap, setUserMap] = useState<Record<string, { userId: string; image: string | null }>>({});
 
-  const load = () => patientsApi.getAll(search || undefined).then(r => setData(r.data)).catch(() => {});
+  const load = () => patientsApi.getAll(search || undefined).then(async r => {
+    setData(r.data);
+    const map: Record<string, { userId: string; image: string | null }> = {};
+    await Promise.all(r.data.map(async (p: any) => {
+      try {
+        const { data: u } = await usersApi.getByLinkedId(p._id);
+        if (u) map[p._id] = { userId: u._id, image: u.profileImage ?? p.profileImage ?? null };
+        else if (p.profileImage) map[p._id] = { userId: p._id, image: p.profileImage };
+      } catch { if (p.profileImage) map[p._id] = { userId: p._id, image: p.profileImage }; }
+    }));
+    setUserMap(map);
+  }).catch(() => {});
   useEffect(() => { load(); }, [search]);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setCredErrors({}); setOpen(true); };
   const openEdit = async (p: any) => {
     setEditing(p);
-    setForm({ name: p.name, age: String(p.age || ''), gender: p.gender || '', phone: p.phone || '', email: p.email || '', address: p.address || '', username: '', password: '', linkedUserId: '' });
+    setForm({ name: p.name, age: String(p.age || ''), gender: p.gender || '', phone: p.phone || '', email: p.email || '', address: p.address || '', username: '', password: '', linkedUserId: '', linkedUserImage: p.profileImage || undefined });
     setCredErrors({});
     setOpen(true);
     try {
       const { data: linkedUser } = await usersApi.getByLinkedId(p._id);
-      if (linkedUser) setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id }));
+      if (linkedUser) setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id, linkedUserImage: linkedUser.profileImage || p.profileImage || undefined }));
     } catch { /* no linked user */ }
   };
 
@@ -65,8 +81,10 @@ const PatientsManagement = () => {
         }
         toast.success('Patient updated');
       } else {
-        const { data: created } = await patientsApi.create(payload);
-        await usersApi.register({ username: form.username, password: form.password, role: 'patient', name: form.name, email: form.email, linkedId: created._id });
+        const { data: result } = await patientsApi.create(
+          { name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address, username: form.username, password: form.password },
+        );
+        const created = result.patient ?? result;
         setData(d => [...d, created]);
         toast.success('Patient added');
       }
@@ -101,12 +119,26 @@ const PatientsManagement = () => {
       <Card className="shadow-card">
         <CardContent className="pt-4 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Name</th><th className="text-left py-2 font-medium">Age</th><th className="text-left py-2 font-medium hidden md:table-cell">Gender</th><th className="text-left py-2 font-medium hidden md:table-cell">Phone</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Patient</th><th className="text-left py-2 font-medium">Age</th><th className="text-left py-2 font-medium hidden md:table-cell">Gender</th><th className="text-left py-2 font-medium hidden md:table-cell">Phone</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
             <tbody>
               {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No patients found.</td></tr>}
               {data.map(p => (
                 <tr key={p._id} className="border-b last:border-0">
-                  <td className="py-2.5 font-medium text-foreground">{p.name}</td>
+                  <td className="py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      {userMap[p._id] ? (
+                        <InlineAvatarUpload
+                          userId={userMap[p._id].userId}
+                          currentImage={userMap[p._id].image}
+                          name={p.name}
+                          onUpdate={url => setUserMap(m => ({ ...m, [p._id]: { ...m[p._id], image: url } }))}
+                        />
+                      ) : (
+                        <Avatar name={p.name} image={p.profileImage} size="xs" />
+                      )}
+                      <span className="font-medium text-foreground">{p.name}</span>
+                    </div>
+                  </td>
                   <td className="py-2.5 text-muted-foreground">{p.age}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{p.gender}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{p.phone}</td>
@@ -123,11 +155,27 @@ const PatientsManagement = () => {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">{editing ? 'Edit' : 'Add'} Patient</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className="flex flex-col max-h-[70vh] w-[90vw] sm:w-auto sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] shadow-lg rounded-lg">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="font-display">{editing ? 'Update' : 'Add'} Patient</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-3 px-1 scroll-smooth">
+            {editing && (
+              <div className="flex justify-center pt-2">
+                <AvatarUpload
+                  userId={form.linkedUserId || editing._id}
+                  currentImage={form.linkedUserImage}
+                  name={form.name}
+                  size="md"
+                  onUpdate={url => setForm(f => ({ ...f, linkedUserImage: url ?? undefined }))}
+                />
+              </div>
+            )}
+            <div className="border-b pb-2">
+              <h3 className="text-lg font-medium text-foreground">Personal Information</h3>
+            </div>
             <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>Age</Label><Input type="number" value={form.age} onChange={e => setField('age', e.target.value)} /></div>
               <div><Label>Gender <span className="text-destructive">*</span></Label>
                 <Select value={form.gender} onValueChange={v => setField('gender', v)}>
@@ -141,7 +189,7 @@ const PatientsManagement = () => {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>Phone</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
               <div><Label>Email</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
             </div>
@@ -149,14 +197,14 @@ const PatientsManagement = () => {
 
             {editing ? (
               <>
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-foreground mb-1">Login Credentials</p>
+                <div className="border-t pt-3">
+                  <h3 className="text-lg font-medium text-foreground mb-1">Account Information</h3>
                   <p className="text-xs text-muted-foreground mb-3">
                     {form.linkedUserId ? 'Username is pre-filled. Leave password empty to keep it unchanged.' : 'No user account linked to this patient yet.'}
                   </p>
                 </div>
                 {form.linkedUserId && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label>Username</Label>
                       <Input value={form.username} onChange={e => setField('username', e.target.value)} className={credErrors.username ? 'border-destructive focus-visible:ring-destructive' : ''} />
@@ -172,11 +220,11 @@ const PatientsManagement = () => {
               </>
             ) : (
               <>
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-foreground mb-1">Login Credentials <span className="text-destructive">*</span></p>
+                <div className="border-t pt-3">
+                  <h3 className="text-lg font-medium text-foreground mb-1">Account Information <span className="text-destructive">*</span></h3>
                   <p className="text-xs text-muted-foreground mb-3">Required to give the patient access to the portal.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label>Username</Label>
                     <Input
@@ -206,7 +254,7 @@ const PatientsManagement = () => {
               </>
             )}
           </div>
-          <DialogFooter><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
+          <DialogFooter className="flex-shrink-0"><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

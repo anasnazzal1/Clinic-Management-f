@@ -14,6 +14,7 @@ export declare class AuthService {
             name: string;
             email: string;
             linkedId: string | undefined;
+            profileImage: string | undefined;
         };
     }>;
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{
@@ -32,5 +33,14 @@ export declare class AuthService {
         role: string;
         name: string;
         email: string;
+    }>;
+    getCurrentUser(userId: string): Promise<{
+        id: import("mongoose").Types.ObjectId;
+        username: string;
+        role: string;
+        name: string;
+        email: string;
+        linkedId: string | undefined;
+        profileImage: string | undefined;
     }>;
 }

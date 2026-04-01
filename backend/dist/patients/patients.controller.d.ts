@@ -1,16 +1,11 @@
 import { Model } from 'mongoose';
 import { Patient } from './patient.schema';
-declare class PatientDto {
-    name: string;
-    age?: number;
-    gender?: string;
-    phone?: string;
-    email?: string;
-    address?: string;
-}
+import { User } from '../users/user.schema';
 export declare class PatientsController {
     private model;
-    constructor(model: Model<Patient>);
+    private userModel;
+    private readonly logger;
+    constructor(model: Model<Patient>, userModel: Model<User>);
     findAll(search?: string): import("mongoose").Query<(import("mongoose").Document<unknown, {}, Patient, {}, import("mongoose").DefaultSchemaOptions> & Patient & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
@@ -37,14 +32,11 @@ export declare class PatientsController {
     } & {
         id: string;
     }, {}, Patient, "findOne", {}> | null;
-    create(dto: PatientDto): Promise<import("mongoose").Document<unknown, {}, Patient, {}, import("mongoose").DefaultSchemaOptions> & Patient & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    } & {
-        id: string;
+    create(body: Record<string, any>, file: Express.Multer.File | undefined, req: any): Promise<{
+        patient: any;
+        user: Record<string, any> | null;
     }>;
-    update(id: string, dto: Partial<PatientDto>): import("mongoose").Query<(import("mongoose").Document<unknown, {}, Patient, {}, import("mongoose").DefaultSchemaOptions> & Patient & Required<{
+    update(id: string, body: Partial<Record<string, any>>): import("mongoose").Query<(import("mongoose").Document<unknown, {}, Patient, {}, import("mongoose").DefaultSchemaOptions> & Patient & Required<{
         _id: import("mongoose").Types.ObjectId;
     }> & {
         __v: number;
@@ -71,4 +63,3 @@ export declare class PatientsController {
         id: string;
     }, {}, Patient, "findOneAndDelete", {}>;
 }
-export {};

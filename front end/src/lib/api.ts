@@ -27,6 +27,7 @@ export default api;
 // Auth
 export const authApi = {
   login: (username: string, password: string) => api.post('/auth/login', { username, password }),
+  me: () => api.get('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
 };
@@ -51,7 +52,12 @@ export const doctorsApi = {
 export const patientsApi = {
   getAll: (search?: string) => api.get('/patients', { params: { search } }),
   getOne: (id: string) => api.get(`/patients/${id}`),
-  create: (data: any) => api.post('/patients', data),
+  create: (data: Record<string, any>, imageFile?: File) => {
+    const form = new FormData();
+    Object.entries(data).forEach(([k, v]) => { if (v !== undefined && v !== null) form.append(k, String(v)); });
+    if (imageFile) form.append('profileImage', imageFile);
+    return api.post('/patients', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   update: (id: string, data: any) => api.put(`/patients/${id}`, data),
   delete: (id: string) => api.delete(`/patients/${id}`),
 };
@@ -87,4 +93,10 @@ export const usersApi = {
   update: (id: string, data: any) => api.put(`/users/${id}`, data),
   delete: (id: string) => api.delete(`/users/${id}`),
   register: (data: any) => api.post('/auth/register', data),
+  uploadImage: (id: string, file: File) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.post(`/users/${id}/upload-image`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  deleteImage: (id: string) => api.delete(`/users/${id}/image`),
 };

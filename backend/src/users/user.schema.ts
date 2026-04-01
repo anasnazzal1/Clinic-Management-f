@@ -9,6 +9,7 @@ export class User extends Document {
   @Prop({ required: true }) name: string;
   @Prop({ required: true }) email: string;
   @Prop() linkedId?: string;
+  @Prop() profileImage?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

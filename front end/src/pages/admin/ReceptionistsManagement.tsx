@@ -8,9 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
+import AvatarUpload from '@/components/AvatarUpload';
+import Avatar from '@/components/Avatar';
+import InlineAvatarUpload from '@/components/InlineAvatarUpload';
 import { toast } from 'sonner';
 
-const emptyForm = { name: '', phone: '', email: '', username: '', password: '', linkedUserId: '' };
+const emptyForm = { name: '', phone: '', email: '', username: '', password: '', linkedUserId: '', linkedUserImage: '' as string | undefined };
 
 const ReceptionistsManagement = () => {
   const [data, setData] = useState<any[]>([]);
@@ -20,8 +23,20 @@ const ReceptionistsManagement = () => {
   const [form, setForm] = useState(emptyForm);
   const [credErrors, setCredErrors] = useState<CredentialErrors>({});
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  // receptionistId → { userId, profileImage }
+  const [userMap, setUserMap] = useState<Record<string, { userId: string; image: string | null }>>({});
 
-  const load = () => receptionistsApi.getAll(search || undefined).then(r => setData(r.data)).catch(() => {});
+  const load = () => receptionistsApi.getAll(search || undefined).then(async r => {
+    setData(r.data);
+    const map: Record<string, { userId: string; image: string | null }> = {};
+    await Promise.all(r.data.map(async (rec: any) => {
+      try {
+        const { data: u } = await usersApi.getByLinkedId(rec._id);
+        if (u) map[rec._id] = { userId: u._id, image: u.profileImage ?? null };
+      } catch { /* no linked user */ }
+    }));
+    setUserMap(map);
+  }).catch(() => {});
   useEffect(() => { load(); }, [search]);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setCredErrors({}); setOpen(true); };
@@ -32,7 +47,7 @@ const ReceptionistsManagement = () => {
     setOpen(true);
     try {
       const { data: linkedUser } = await usersApi.getByLinkedId(r._id);
-      if (linkedUser) setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id }));
+      if (linkedUser) setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id, linkedUserImage: linkedUser.profileImage }));
     } catch { /* no linked user */ }
   };
 
@@ -98,12 +113,26 @@ const ReceptionistsManagement = () => {
       <Card className="shadow-card">
         <CardContent className="pt-4 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Name</th><th className="text-left py-2 font-medium">Phone</th><th className="text-left py-2 font-medium hidden md:table-cell">Email</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Receptionist</th><th className="text-left py-2 font-medium">Phone</th><th className="text-left py-2 font-medium hidden md:table-cell">Email</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
             <tbody>
               {data.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No receptionists found.</td></tr>}
               {data.map(r => (
                 <tr key={r._id} className="border-b last:border-0">
-                  <td className="py-2.5 font-medium text-foreground">{r.name}</td>
+                  <td className="py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      {userMap[r._id] ? (
+                        <InlineAvatarUpload
+                          userId={userMap[r._id].userId}
+                          currentImage={userMap[r._id].image}
+                          name={r.name}
+                          onUpdate={url => setUserMap(m => ({ ...m, [r._id]: { ...m[r._id], image: url } }))}
+                        />
+                      ) : (
+                        <Avatar name={r.name} size="xs" />
+                      )}
+                      <span className="font-medium text-foreground">{r.name}</span>
+                    </div>
+                  </td>
                   <td className="py-2.5 text-muted-foreground">{r.phone}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{r.email}</td>
                   <td className="py-2.5 text-right space-x-1">
@@ -121,6 +150,11 @@ const ReceptionistsManagement = () => {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">{editing ? 'Edit' : 'Add'} Receptionist</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {editing && form.linkedUserId && (
+              <div className="flex justify-center pt-2">
+                <AvatarUpload userId={form.linkedUserId} currentImage={form.linkedUserImage} name={form.name} size="md" onUpdate={url => setForm(f => ({ ...f, linkedUserImage: url ?? undefined }))} />
+              </div>
+            )}
             <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Phone</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>

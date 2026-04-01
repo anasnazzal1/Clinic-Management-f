@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
+import AvatarUpload from '@/components/AvatarUpload';
+import Avatar from '@/components/Avatar';
+import InlineAvatarUpload from '@/components/InlineAvatarUpload';
 import { toast } from 'sonner';
 import { TimePicker } from '@/components/ui/time-picker';
 
@@ -42,7 +45,8 @@ const emptyForm = {
   name: '', specialization: '', phone: '', email: '', clinicId: '',
   workingDays: [] as string[], startTime: '', endTime: '',
   username: '', password: '',
-  linkedUserId: '',   // _id of the User document linked to this doctor
+  linkedUserId: '',
+  linkedUserImage: '' as string | undefined,
 };
 
 const DoctorsManagement = () => {
@@ -54,9 +58,22 @@ const DoctorsManagement = () => {
   const [form, setForm] = useState(emptyForm);
   const [credErrors, setCredErrors] = useState<CredentialErrors>({});
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  // doctorId → { userId, profileImage }
+  const [userMap, setUserMap] = useState<Record<string, { userId: string; image: string | null }>>({});
 
   const load = () => {
-    doctorsApi.getAll({ search: search || undefined }).then(r => setData(r.data)).catch(() => {});
+    doctorsApi.getAll({ search: search || undefined }).then(async r => {
+      setData(r.data);
+      // Load linked user info for each doctor to get userId + profileImage
+      const map: Record<string, { userId: string; image: string | null }> = {};
+      await Promise.all(r.data.map(async (d: any) => {
+        try {
+          const { data: u } = await usersApi.getByLinkedId(d._id);
+          if (u) map[d._id] = { userId: u._id, image: u.profileImage ?? null };
+        } catch { /* no linked user */ }
+      }));
+      setUserMap(map);
+    }).catch(() => {});
     clinicsApi.getAll().then(r => setClinics(r.data)).catch(() => {});
   };
   useEffect(() => { load(); }, [search]);
@@ -79,7 +96,7 @@ const DoctorsManagement = () => {
     try {
       const { data: linkedUser } = await usersApi.getByLinkedId(d._id);
       if (linkedUser) {
-        setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id }));
+        setForm(f => ({ ...f, username: linkedUser.username, linkedUserId: linkedUser._id, linkedUserImage: linkedUser.profileImage }));
       }
     } catch { /* no linked user — leave fields empty */ }
   };
@@ -164,12 +181,29 @@ const DoctorsManagement = () => {
       <Card className="shadow-card">
         <CardContent className="pt-4 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Name</th><th className="text-left py-2 font-medium">Specialization</th><th className="text-left py-2 font-medium hidden md:table-cell">Department</th><th className="text-left py-2 font-medium hidden lg:table-cell">Schedule</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Doctor</th><th className="text-left py-2 font-medium">Specialization</th><th className="text-left py-2 font-medium hidden md:table-cell">Department</th><th className="text-left py-2 font-medium hidden lg:table-cell">Schedule</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
             <tbody>
               {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No doctors found.</td></tr>}
               {data.map(d => (
                 <tr key={d._id} className="border-b last:border-0">
-                  <td className="py-2.5 font-medium text-foreground">{d.name}</td>
+                  <td className="py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      {userMap[d._id] ? (
+                        <InlineAvatarUpload
+                          userId={userMap[d._id].userId}
+                          currentImage={userMap[d._id].image}
+                          name={d.name}
+                          onUpdate={url => {
+                            setUserMap(m => ({ ...m, [d._id]: { ...m[d._id], image: url } }));
+                            doctorsApi.update(d._id, { avatar: url ?? '' }).catch(() => {});
+                          }}
+                        />
+                      ) : (
+                        <Avatar name={d.name} image={d.avatar} size="xs" />
+                      )}
+                      <span className="font-medium text-foreground">{d.name}</span>
+                    </div>
+                  </td>
                   <td className="py-2.5 text-primary font-medium">{d.specialization}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{d.clinicId?.name || '—'}</td>
                   <td className="py-2.5 hidden lg:table-cell text-muted-foreground">{d.workingDays} • {d.workingHours}</td>
@@ -188,6 +222,22 @@ const DoctorsManagement = () => {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editing ? 'Edit' : 'Add'} Doctor</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {/* Avatar — only shown when editing and a linked user exists */}
+            {editing && form.linkedUserId && (
+              <div className="flex justify-center pt-2">
+                <AvatarUpload
+                  userId={form.linkedUserId}
+                  currentImage={form.linkedUserImage}
+                  name={form.name}
+                  size="md"
+                  onUpdate={async url => {
+                    setForm(f => ({ ...f, linkedUserImage: url ?? undefined }));
+                    // Sync doctor avatar field so Landing page shows the image
+                    if (editing) await doctorsApi.update(editing._id, { avatar: url ?? '' });
+                  }}
+                />
+              </div>
+            )}
             <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
             <div><Label>Specialization</Label><Input value={form.specialization} onChange={e => setField('specialization', e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-4">

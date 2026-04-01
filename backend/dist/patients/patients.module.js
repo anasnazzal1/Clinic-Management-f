@@ -10,13 +10,17 @@ exports.PatientsModule = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const patient_schema_1 = require("./patient.schema");
+const user_schema_1 = require("../users/user.schema");
 const patients_controller_1 = require("./patients.controller");
 let PatientsModule = class PatientsModule {
 };
 exports.PatientsModule = PatientsModule;
 exports.PatientsModule = PatientsModule = __decorate([
     (0, common_1.Module)({
-        imports: [mongoose_1.MongooseModule.forFeature([{ name: patient_schema_1.Patient.name, schema: patient_schema_1.PatientSchema }])],
+        imports: [mongoose_1.MongooseModule.forFeature([
+                { name: patient_schema_1.Patient.name, schema: patient_schema_1.PatientSchema },
+                { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
+            ])],
         controllers: [patients_controller_1.PatientsController],
         exports: [mongoose_1.MongooseModule],
     })

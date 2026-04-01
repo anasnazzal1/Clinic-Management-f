@@ -23,25 +23,25 @@ const navItems: Record<string, NavItem[]> = {
     { label: 'Patients',       path: '/admin/patients',       icon: Users },
     { label: 'Receptionists',  path: '/admin/receptionists',  icon: UserPlus },
     { label: 'Appointments',   path: '/admin/appointments',   icon: Calendar },
-    { label: 'Change Password', path: '/change-password',     icon: KeyRound },
+    { label: 'My Profile',      path: '/change-password',      icon: KeyRound },
   ],
   doctor: [
     { label: 'Dashboard',       path: '/doctor',              icon: LayoutDashboard },
     { label: 'Appointments',    path: '/doctor/appointments', icon: Calendar },
-    { label: 'Change Password', path: '/change-password',     icon: KeyRound },
+    { label: 'My Profile',      path: '/change-password',     icon: KeyRound },
   ],
   receptionist: [
     { label: 'Dashboard',       path: '/reception',                icon: LayoutDashboard },
     { label: 'Add Patient',     path: '/reception/add-patient',    icon: UserPlus },
     { label: 'Book Appointment',path: '/reception/book',           icon: CalendarPlus },
     { label: 'Appointments',    path: '/reception/appointments',   icon: Calendar },
-    { label: 'Change Password', path: '/change-password',          icon: KeyRound },
+    { label: 'My Profile',      path: '/change-password',          icon: KeyRound },
   ],
   patient: [
     { label: 'Dashboard',       path: '/patient',             icon: LayoutDashboard },
     { label: 'Appointments',    path: '/patient/appointments',icon: Calendar },
     { label: 'Medical History', path: '/patient/history',     icon: FileText },
-    { label: 'Change Password', path: '/change-password',     icon: KeyRound },
+    { label: 'My Profile',      path: '/change-password',     icon: KeyRound },
   ],
 };
 
@@ -105,10 +105,20 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </nav>
 
         <div className="p-3 border-t border-sidebar-border">
-          <div className="px-3 py-2 mb-2">
-            <p className="text-xs text-sidebar-foreground/60 uppercase tracking-wider">Signed in as</p>
-            <p className="text-sm font-medium text-sidebar-accent-foreground truncate">{user.name}</p>
-            <p className="text-xs text-sidebar-foreground/60 capitalize">{user.role}</p>
+          <div className="px-3 py-2 mb-2 flex items-center gap-3">
+            {user.profileImage ? (
+              <img src={`http://localhost:3000${user.profileImage}?t=${Date.now()}`} alt={user.name} className="w-9 h-9 rounded-full object-cover shrink-0 border border-sidebar-border" />
+            ) : (
+              <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-primary-foreground">
+                  {user.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-sidebar-accent-foreground truncate">{user.name}</p>
+              <p className="text-xs text-sidebar-foreground/60 capitalize">{user.role}</p>
+            </div>
           </div>
           <button
             onClick={handleLogout}

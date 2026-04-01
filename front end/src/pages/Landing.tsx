@@ -30,9 +30,14 @@ interface Doctor {
   workingHours: string;
 }
 
-const DoctorAvatar = ({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) => {
+const BASE = 'http://localhost:3000';
+
+const DoctorAvatar = ({ name, size = 'md', image }: { name: string; size?: 'sm' | 'md' | 'lg'; image?: string }) => {
   const initials = name.split(' ').filter(Boolean).slice(-2).map(w => w[0]).join('');
   const sz = { sm: 'w-9 h-9 text-sm', md: 'w-14 h-14 text-lg', lg: 'w-20 h-20 text-2xl' }[size];
+  if (image) return (
+    <img src={`${BASE}${image}`} alt={name} className={`${sz} rounded-full object-cover shrink-0 border-2 border-border`} />
+  );
   return (
     <div className={`${sz} rounded-full gradient-primary flex items-center justify-center shrink-0`}>
       <span className="font-display font-bold text-primary-foreground">{initials}</span>
@@ -311,7 +316,7 @@ const Landing = () => {
                                 className="group text-left rounded-xl border bg-card p-4 hover:shadow-elevated hover:border-primary/30 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               >
                                 <div className="flex items-center gap-3 mb-3">
-                                  <DoctorAvatar name={doc.name} size="sm" />
+                                  <DoctorAvatar name={doc.name} size="sm" image={doc.avatar} />
                                   <div className="min-w-0">
                                     <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{doc.name}</p>
                                     <p className="text-xs text-primary font-medium truncate">{doc.specialization}</p>
@@ -362,7 +367,7 @@ const Landing = () => {
                 <DialogTitle className="font-display sr-only">Doctor Profile</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col items-center text-center pt-2 pb-4 gap-3">
-                <DoctorAvatar name={selectedDoctor.name} size="lg" />
+                <DoctorAvatar name={selectedDoctor.name} size="lg" image={selectedDoctor.avatar} />
                 <div>
                   <h3 className="font-display font-bold text-xl text-foreground">{selectedDoctor.name}</h3>
                   <Badge className="mt-1 gradient-primary border-0 text-primary-foreground">{selectedDoctor.specialization}</Badge>

@@ -90,6 +90,9 @@ let AuthController = class AuthController {
     login(dto) {
         return this.authService.login(dto.username, dto.password);
     }
+    me(req) {
+        return this.authService.getCurrentUser(req.user.sub);
+    }
     changePassword(dto, req) {
         return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
     }
@@ -105,6 +108,14 @@ __decorate([
     __metadata("design:paramtypes", [LoginDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "me", null);
 __decorate([
     (0, common_1.Post)('change-password'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

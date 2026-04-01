@@ -48,6 +48,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
+const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
+const path_1 = require("path");
+const fs_1 = require("fs");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const bcrypt = __importStar(require("bcrypt"));
@@ -88,6 +92,19 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UserDto.prototype, "linkedId", void 0);
+const imageStorage = (0, multer_1.diskStorage)({
+    destination: (0, path_1.join)(process.cwd(), 'uploads'),
+    filename: (_req, file, cb) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+        cb(null, `${unique}${(0, path_1.extname)(file.originalname)}`);
+    },
+});
+const imageFilter = (_req, file, cb) => {
+    if (!file.mimetype.match(/^image\/(jpeg|jpg|png)$/)) {
+        return cb(new common_1.BadRequestException('Only JPG and PNG files are allowed.'), false);
+    }
+    cb(null, true);
+};
 let UsersController = class UsersController {
     model;
     constructor(model) {
@@ -116,6 +133,34 @@ let UsersController = class UsersController {
     }
     delete(id) {
         return this.model.findByIdAndDelete(id);
+    }
+    async uploadImage(id, file, req) {
+        if (!file)
+            throw new common_1.BadRequestException('No file uploaded.');
+        if (req.user.role !== 'admin') {
+            const existing = await this.model.findOne({ linkedId: req.user.linkedId });
+            if (!existing || existing._id.toString() !== id) {
+                throw new common_1.BadRequestException('You can only update your own profile image.');
+            }
+        }
+        const user = await this.model.findById(id);
+        if (user?.profileImage) {
+            const oldPath = (0, path_1.join)(process.cwd(), 'uploads', user.profileImage.split('/uploads/')[1] ?? '');
+            if ((0, fs_1.existsSync)(oldPath))
+                (0, fs_1.unlinkSync)(oldPath);
+        }
+        const imageUrl = `/uploads/${file.filename}`;
+        const updated = await this.model.findByIdAndUpdate(id, { profileImage: imageUrl }, { new: true }).select('-password');
+        return updated;
+    }
+    async deleteImage(id) {
+        const user = await this.model.findById(id);
+        if (user?.profileImage) {
+            const filePath = (0, path_1.join)(process.cwd(), 'uploads', user.profileImage.split('/uploads/')[1] ?? '');
+            if ((0, fs_1.existsSync)(filePath))
+                (0, fs_1.unlinkSync)(filePath);
+        }
+        return this.model.findByIdAndUpdate(id, { $unset: { profileImage: '' } }, { new: true }).select('-password');
     }
 };
 exports.UsersController = UsersController;
@@ -162,6 +207,24 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "delete", null);
+__decorate([
+    (0, common_1.Post)(':id/upload-image'),
+    (0, roles_decorator_1.Roles)('admin', 'receptionist', 'doctor', 'patient'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('image', { storage: imageStorage, fileFilter: imageFilter, limits: { fileSize: 2 * 1024 * 1024 } })),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "uploadImage", null);
+__decorate([
+    (0, common_1.Delete)(':id/image'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "deleteImage", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),

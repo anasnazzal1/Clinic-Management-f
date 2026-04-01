@@ -27,7 +27,17 @@ export declare class AuthController {
             name: string;
             email: string;
             linkedId: string | undefined;
+            profileImage: string | undefined;
         };
+    }>;
+    me(req: any): Promise<{
+        id: import("mongoose").Types.ObjectId;
+        username: string;
+        role: string;
+        name: string;
+        email: string;
+        linkedId: string | undefined;
+        profileImage: string | undefined;
     }>;
     changePassword(dto: ChangePasswordDto, req: any): Promise<{
         message: string;

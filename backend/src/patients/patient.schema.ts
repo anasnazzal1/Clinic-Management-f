@@ -9,6 +9,7 @@ export class Patient extends Document {
   @Prop() phone: string;
   @Prop() email: string;
   @Prop() address: string;
+  @Prop() profileImage?: string;
 }
 
 export const PatientSchema = SchemaFactory.createForClass(Patient);

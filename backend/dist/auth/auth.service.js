@@ -67,7 +67,7 @@ let AuthService = class AuthService {
         const payload = { sub: user._id, username: user.username, role: user.role, linkedId: user.linkedId, name: user.name };
         return {
             access_token: this.jwtService.sign(payload),
-            user: { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email, linkedId: user.linkedId },
+            user: { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email, linkedId: user.linkedId, profileImage: user.profileImage },
         };
     }
     async changePassword(userId, currentPassword, newPassword) {
@@ -88,6 +88,12 @@ let AuthService = class AuthService {
         const hashed = await bcrypt.hash(dto.password, 10);
         const user = await this.userModel.create({ ...dto, password: hashed });
         return { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email };
+    }
+    async getCurrentUser(userId) {
+        const user = await this.userModel.findById(userId).select('-password');
+        if (!user)
+            throw new common_1.UnauthorizedException();
+        return { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email, linkedId: user.linkedId, profileImage: user.profileImage };
     }
 };
 exports.AuthService = AuthService;

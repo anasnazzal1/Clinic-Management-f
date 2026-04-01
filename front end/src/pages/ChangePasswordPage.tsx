@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { authApi } from '@/lib/api';
+import { authApi, usersApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { KeyRound, Eye, EyeOff, CheckCircle2, User } from 'lucide-react';
+import AvatarUpload from '@/components/AvatarUpload';
 import { toast } from 'sonner';
 
 const PasswordInput = ({
@@ -42,7 +43,7 @@ const PasswordInput = ({
 };
 
 const ChangePasswordPage = () => {
-  const { logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [form, setForm] = useState({ current: '', next: '', confirm: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -99,14 +100,35 @@ const ChangePasswordPage = () => {
     <div className="flex justify-center px-4 py-6">
       <div className="w-full max-w-md space-y-6">
         <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Change Password</h2>
-          <p className="text-sm text-muted-foreground">Update your account password securely.</p>
+          <h2 className="font-display text-2xl font-bold text-foreground">My Profile</h2>
+          <p className="text-sm text-muted-foreground">Manage your profile image and password.</p>
         </div>
+
+        {/* Profile image card */}
+        {user && (
+          <Card className="shadow-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-display text-base flex items-center gap-2">
+                <User className="w-4 h-4 text-primary" /> Profile Image
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-3 pb-6">
+              <AvatarUpload
+                userId={user.id}
+                currentImage={user.profileImage}
+                name={user.name}
+                size="lg"
+                onUpdate={url => updateUser({ profileImage: url ?? undefined })}
+              />
+              <p className="text-xs text-muted-foreground text-center">JPG or PNG, max 2 MB</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-card">
           <CardHeader className="pb-3">
             <CardTitle className="font-display text-base flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-primary" /> Password Settings
+              <KeyRound className="w-4 h-4 text-primary" /> Change Password
             </CardTitle>
           </CardHeader>
           <CardContent>
