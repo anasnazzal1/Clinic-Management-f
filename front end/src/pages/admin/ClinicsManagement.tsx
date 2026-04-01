@@ -96,7 +96,7 @@ const ClinicsManagement = () => {
           <h2 className="font-display text-2xl font-bold text-foreground">Departments</h2>
           <p className="text-sm text-muted-foreground">Manage specialties and departments within the medical center.</p>
         </div>
-        <Button onClick={openAdd} className="gradient-primary border-0 text-primary-foreground"><Plus className="w-4 h-4 mr-2" /> Add Department</Button>
+        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"><Plus className="w-4 h-4 mr-2" /> Add Department</Button>
       </div>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -144,7 +144,7 @@ const ClinicsManagement = () => {
               <div><Label>End Time</Label><TimePicker value={form.endTime} onChange={v => setForm(f => ({ ...f, endTime: v }))} placeholder="End time" minTime={form.startTime} /></div>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

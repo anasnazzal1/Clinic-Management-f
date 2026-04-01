@@ -127,7 +127,7 @@ const Landing = () => {
           <div className="flex items-center gap-3">
             <a href="#clinics" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">Departments</a>
             <a href="#doctors" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">Doctors</a>
-            <Link to="/login"><Button size="sm" className="gradient-primary border-0 text-primary-foreground">Sign In</Button></Link>
+            <Link to="/login"><Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">Sign In</Button></Link>
           </div>
         </div>
       </nav>
@@ -147,12 +147,12 @@ const Landing = () => {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link to="/login">
-                <Button size="lg" className="gradient-primary border-0 text-primary-foreground font-semibold">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
                   Get Started <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
               <a href="#clinics">
-                <Button size="lg" variant="outline" className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
                   View Departments
                 </Button>
               </a>

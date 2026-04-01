@@ -104,7 +104,7 @@ const ReceptionistsManagement = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div><h2 className="font-display text-2xl font-bold text-foreground">Receptionists</h2><p className="text-sm text-muted-foreground">Manage front desk staff.</p></div>
-        <Button onClick={openAdd} className="gradient-primary border-0 text-primary-foreground"><Plus className="w-4 h-4 mr-2" /> Add Receptionist</Button>
+        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"><Plus className="w-4 h-4 mr-2" /> Add Receptionist</Button>
       </div>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -220,7 +220,7 @@ const ReceptionistsManagement = () => {
               </>
             )}
           </div>
-          <DialogFooter><Button onClick={handleSave} className="gradient-primary border-0 text-primary-foreground">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
