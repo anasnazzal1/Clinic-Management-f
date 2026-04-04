@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { patientsApi, usersApi } from '@/lib/api';
 import { validateCredentials, hasCredentialErrors, type CredentialErrors } from '@/lib/validateCredentials';
@@ -18,6 +19,7 @@ import { toast } from 'sonner';
 const emptyForm = { name: '', age: '', gender: '', phone: '', email: '', address: '', username: '', password: '', linkedUserId: '', linkedUserImage: '' as string | undefined };
 
 const PatientsManagement = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
@@ -56,7 +58,7 @@ const PatientsManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) { toast.error('Name is required'); return; }
+    if (!form.name.trim()) { toast.error(t('nameRequired')); return; }
 
     if (!editing) {
       const errors = validateCredentials(form.username, form.password, true);
@@ -79,23 +81,23 @@ const PatientsManagement = () => {
           if (form.password) userPatch.password = form.password;
           if (Object.keys(userPatch).length > 0) await usersApi.update(form.linkedUserId, userPatch);
         }
-        toast.success('Patient updated');
+        toast.success(t('patientUpdated'));
       } else {
         const { data: result } = await patientsApi.create(
           { name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address, username: form.username, password: form.password },
         );
         const created = result.patient ?? result;
         setData(d => [...d, created]);
-        toast.success('Patient added');
+        toast.success(t('patientAdded'));
       }
       setOpen(false);
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save patient'); }
+    } catch (e: any) { toast.error(e.response?.data?.message || t('failedSavePatient')); }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    try { await patientsApi.delete(deleteTarget._id); setData(d => d.filter(p => p._id !== deleteTarget._id)); toast.success('Patient deleted'); }
-    catch { toast.error('Failed to delete patient'); }
+    try { await patientsApi.delete(deleteTarget._id); setData(d => d.filter(p => p._id !== deleteTarget._id)); toast.success(t('patientDeleted')); }
+    catch { toast.error(t('failedDeletePatient')); }
     finally { setDeleteTarget(null); }
   };
 
@@ -109,19 +111,19 @@ const PatientsManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h2 className="font-display text-2xl font-bold text-foreground">Patients</h2><p className="text-sm text-muted-foreground">Manage patient records.</p></div>
-        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"><Plus className="w-4 h-4 mr-2" /> Add Patient</Button>
+        <div><h2 className="font-display text-2xl font-bold text-foreground">{t('patientsTitle')}</h2><p className="text-sm text-muted-foreground">{t('patientsSubtitle')}</p></div>
+        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"><Plus className="w-4 h-4 mr-2" /> {t('addPatient')}</Button>
       </div>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search patients..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder={t('searchPatientsPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <Card className="shadow-card">
         <CardContent className="pt-4 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Patient</th><th className="text-left py-2 font-medium">Age</th><th className="text-left py-2 font-medium hidden md:table-cell">Gender</th><th className="text-left py-2 font-medium hidden md:table-cell">Phone</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">{t('patient')}</th><th className="text-left py-2 font-medium">{t('age')}</th><th className="text-left py-2 font-medium hidden md:table-cell">{t('gender')}</th><th className="text-left py-2 font-medium hidden md:table-cell">{t('phone')}</th><th className="text-right py-2 font-medium">{t('actions')}</th></tr></thead>
             <tbody>
-              {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No patients found.</td></tr>}
+              {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">{t('noPatientsFound')}</td></tr>}
               {data.map(p => (
                 <tr key={p._id} className="border-b last:border-0">
                   <td className="py-2.5">
@@ -143,7 +145,7 @@ const PatientsManagement = () => {
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{p.gender}</td>
                   <td className="py-2.5 hidden md:table-cell text-muted-foreground">{p.phone}</td>
                   <td className="py-2.5 text-right space-x-1">
-                    <Button variant="ghost" size="icon" title="View Profile" onClick={() => navigate(`/admin/patients/${p._id}`)}><Eye className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" title={t('viewProfile')} onClick={() => navigate(`/admin/patients/${p._id}`)}><Eye className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(p)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                   </td>
@@ -157,7 +159,7 @@ const PatientsManagement = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex flex-col max-h-[70vh] w-[90vw] sm:w-auto sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] shadow-lg rounded-lg">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="font-display">{editing ? 'Update' : 'Add'} Patient</DialogTitle>
+            <DialogTitle className="font-display">{editing ? t('update') : t('add')} {t('patient')}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-3 px-1 scroll-smooth">
             {editing && (
@@ -174,33 +176,33 @@ const PatientsManagement = () => {
             <div className="border-b pb-2">
               <h3 className="text-lg font-medium text-foreground">Personal Information</h3>
             </div>
-            <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
+            <div><Label>{t('fullName')}</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><Label>Age</Label><Input type="number" value={form.age} onChange={e => setField('age', e.target.value)} /></div>
-              <div><Label>Gender <span className="text-destructive">*</span></Label>
+              <div><Label>{t('age')}</Label><Input type="number" value={form.age} onChange={e => setField('age', e.target.value)} /></div>
+              <div><Label>{t('gender')} <span className="text-destructive">*</span></Label>
                 <Select value={form.gender} onValueChange={v => setField('gender', v)}>
                   <SelectTrigger className={!form.gender && form.name ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Select gender" />
+                    <SelectValue placeholder={t('selectGender')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Male">{t('male')}</SelectItem>
+                    <SelectItem value="Female">{t('female')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
-              <div><Label>Email</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
+              <div><Label>{t('phone')}</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
+              <div><Label>{t('email')}</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
             </div>
-            <div><Label>Address</Label><Input value={form.address} onChange={e => setField('address', e.target.value)} /></div>
+            <div><Label>{t('address')}</Label><Input value={form.address} onChange={e => setField('address', e.target.value)} /></div>
 
             {editing ? (
               <>
                 <div className="border-t pt-3">
-                  <h3 className="text-lg font-medium text-foreground mb-1">Account Information</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-1">{t('accountInformation')}</h3>
                   <p className="text-xs text-muted-foreground mb-3">
-                    {form.linkedUserId ? 'Username is pre-filled. Leave password empty to keep it unchanged.' : 'No user account linked to this patient yet.'}
+                    {form.linkedUserId ? t('usernamePrefilled') : t('noUserAccount')}
                   </p>
                 </div>
                 {form.linkedUserId && (
@@ -212,7 +214,7 @@ const PatientsManagement = () => {
                     </div>
                     <div className="space-y-1">
                       <Label>New Password <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                      <Input type="password" value={form.password} onChange={e => setField('password', e.target.value)} placeholder="Leave empty to keep current" className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''} />
+                      <Input type="password" value={form.password} onChange={e => setField('password', e.target.value)} placeholder={t('leaveEmpty')} className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''} />
                       {credErrors.password && <p className="text-xs text-destructive">{credErrors.password}</p>}
                     </div>
                   </div>
@@ -221,8 +223,8 @@ const PatientsManagement = () => {
             ) : (
               <>
                 <div className="border-t pt-3">
-                  <h3 className="text-lg font-medium text-foreground mb-1">Account Information <span className="text-destructive">*</span></h3>
-                  <p className="text-xs text-muted-foreground mb-3">Required to give the patient access to the portal.</p>
+                  <h3 className="text-lg font-medium text-foreground mb-1">{t('accountInformation')} <span className="text-destructive">*</span></h3>
+                  <p className="text-xs text-muted-foreground mb-3">{t('requiredForPortal')}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -231,7 +233,7 @@ const PatientsManagement = () => {
                       value={form.username}
                       onChange={e => setField('username', e.target.value)}
                       className={credErrors.username ? 'border-destructive focus-visible:ring-destructive' : ''}
-                      placeholder="min. 4 chars, no spaces"
+                      placeholder={t('usernamePlaceholder')}
                     />
                     {credErrors.username && (
                       <p className="text-xs text-destructive">{credErrors.username}</p>
@@ -244,7 +246,7 @@ const PatientsManagement = () => {
                       value={form.password}
                       onChange={e => setField('password', e.target.value)}
                       className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                      placeholder="min. 6 chars, letter + number"
+                      placeholder={t('passwordPlaceholder')}
                     />
                     {credErrors.password && (
                       <p className="text-xs text-destructive">{credErrors.password}</p>
@@ -254,7 +256,7 @@ const PatientsManagement = () => {
               </>
             )}
           </div>
-          <DialogFooter className="flex-shrink-0"><Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
+          <DialogFooter className="flex-shrink-0"><Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{editing ? t('update') : t('add')}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

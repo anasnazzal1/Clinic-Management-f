@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clinicsApi, doctorsApi } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 interface Clinic {
   _id: string;
@@ -52,6 +54,7 @@ const getClinicId = (doc: Doctor): string =>
     : (doc.clinicId as string);
 
 const Landing = () => {
+  const { t } = useTranslation();
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,12 +125,13 @@ const Landing = () => {
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <Stethoscope className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-lg text-foreground">MediCare</span>
+            <span className="font-display font-bold text-lg text-foreground">{t('appName')}</span>
           </div>
           <div className="flex items-center gap-3">
-            <a href="#clinics" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">Departments</a>
-            <a href="#doctors" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">Doctors</a>
-            <Link to="/login"><Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">Sign In</Button></Link>
+            <a href="#clinics" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">{t('departments')}</a>
+            <a href="#doctors" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">{t('doctors')}</a>
+            <LanguageSwitcher />
+            <Link to="/login"><Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{t('signIn')}</Button></Link>
           </div>
         </div>
       </nav>
@@ -137,23 +141,23 @@ const Landing = () => {
         <div className="container mx-auto px-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-primary/20 text-primary-foreground/80 px-3 py-1 rounded-full text-xs font-medium mb-6">
-              <Heart className="w-3 h-3" /> Trusted by 10,000+ patients
+              <Heart className="w-3 h-3" /> {t('trustedBy')}
             </div>
             <h1 className="font-display text-4xl lg:text-6xl font-extrabold leading-tight mb-6">
-              Your Health,<br />Our Priority
+              {t('heroTitle')}
             </h1>
             <p className="text-lg text-primary-foreground/70 mb-8 max-w-lg">
-              One medical center, multiple specialties — compassionate doctors and seamless appointment management all under one roof.
+              {t('heroSubtitle')}
             </p>
             <div className="flex flex-wrap gap-3">
               <Link to="/login">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-                  Get Started <ArrowRight className="ml-2 w-4 h-4" />
+                  {t('getStarted')} <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
               <a href="#clinics">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-                  View Departments
+                  {t('viewDepartments')}
                 </Button>
               </a>
             </div>
@@ -165,10 +169,10 @@ const Landing = () => {
       <section className="py-12 border-b">
         <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { value: loading ? '—' : String(clinics.length), label: 'Departments' },
-            { value: loading ? '—' : String(doctors.length), label: 'Doctors' },
-            { value: loading ? '—' : String(specializations.length), label: 'Specializations' },
-            { value: '24/7', label: 'Emergency Care' },
+            { value: loading ? '—' : String(clinics.length), label: t('stats.departments') },
+            { value: loading ? '—' : String(doctors.length), label: t('stats.doctors') },
+            { value: loading ? '—' : String(specializations.length), label: t('stats.specializations') },
+            { value: '24/7', label: t('stats.emergency') },
           ].map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="text-center">
               <div className="font-display text-3xl font-extrabold text-primary">{s.value}</div>
@@ -182,14 +186,14 @@ const Landing = () => {
       <section id="clinics" className="pt-16 pb-4">
         <div className="container mx-auto px-4">
           <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <h2 className="font-display text-3xl font-bold text-foreground mb-1">Our Departments & Doctors</h2>
-            <p className="text-muted-foreground mb-8">Browse all specialties and the doctors working at our medical center.</p>
+            <h2 className="font-display text-3xl font-bold text-foreground mb-1">{t('departmentsAndDoctors')}</h2>
+            <p className="text-muted-foreground mb-8">{t('departmentsDescription')}</p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-2xl">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   className="pl-9"
-                  placeholder="Search clinics or doctors..."
+                  placeholder={t('searchPlaceholder')}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -220,7 +224,7 @@ const Landing = () => {
           {loading && (
             <div className="py-24 flex flex-col items-center gap-3 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <span className="text-sm">Loading departments and doctors...</span>
+              <span className="text-sm">{t('loading')}</span>
             </div>
           )}
 
@@ -228,7 +232,7 @@ const Landing = () => {
           {!loading && error && (
             <div className="py-20 text-center">
               <p className="text-destructive font-medium mb-2">{error}</p>
-              <p className="text-sm text-muted-foreground">Make sure the backend server is running on port 3000.</p>
+              <p className="text-sm text-muted-foreground">{t('failedLoadData')}</p>
             </div>
           )}
 
@@ -236,14 +240,14 @@ const Landing = () => {
           {!loading && !error && clinics.length === 0 && (
             <div className="py-20 text-center text-muted-foreground">
               <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No departments available yet.</p>
-              <p className="text-sm mt-1">An admin can add departments from the dashboard.</p>
+              <p className="font-medium">{t('noDepartments')}</p>
+              <p className="text-sm mt-1">{t('adminAddDepartments')}</p>
             </div>
           )}
 
           {/* No search results */}
           {!loading && !error && clinics.length > 0 && filteredClinics.length === 0 && (
-            <div className="py-20 text-center text-muted-foreground">No results found. Try a different search.</div>
+            <div className="py-20 text-center text-muted-foreground">{t('noResults')}</div>
           )}
 
           {/* Clinic cards */}

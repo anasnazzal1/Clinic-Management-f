@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { clinicsApi, doctorsApi, patientsApi, receptionistsApi, appointmentsApi } from '@/lib/api';
 import { Building2, Stethoscope, Users, UserPlus, Calendar } from 'lucide-react';
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({ clinics: 0, doctors: 0, patients: 0, receptionists: 0, appointments: 0 });
   const [recentAppts, setRecentAppts] = useState<any[]>([]);
 
@@ -21,18 +23,18 @@ const AdminDashboard = () => {
   }, []);
 
   const statCards = [
-    { label: 'Departments', value: stats.clinics, icon: Building2, color: 'text-primary' },
-    { label: 'Doctors', value: stats.doctors, icon: Stethoscope, color: 'text-info' },
-    { label: 'Patients', value: stats.patients, icon: Users, color: 'text-success' },
-    { label: 'Receptionists', value: stats.receptionists, icon: UserPlus, color: 'text-warning' },
-    { label: 'Appointments', value: stats.appointments, icon: Calendar, color: 'text-primary' },
+    { label: t('stats.departments'), value: stats.clinics, icon: Building2, color: 'text-primary' },
+    { label: t('stats.doctors'), value: stats.doctors, icon: Stethoscope, color: 'text-info' },
+    { label: t('patients'), value: stats.patients, icon: Users, color: 'text-success' },
+    { label: t('receptionists'), value: stats.receptionists, icon: UserPlus, color: 'text-warning' },
+    { label: t('appointments'), value: stats.appointments, icon: Calendar, color: 'text-primary' },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-bold text-foreground">Admin Overview</h2>
-        <p className="text-muted-foreground text-sm">Manage your entire medical center.</p>
+        <h2 className="font-display text-2xl font-bold text-foreground">{t('overviewTitle')}</h2>
+        <p className="text-muted-foreground text-sm">{t('overviewSubtitle')}</p>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map(s => (
@@ -72,7 +74,7 @@ const AdminDashboard = () => {
                   </tr>
                 ))}
                 {recentAppts.length === 0 && (
-                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No appointments yet.</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">{t('noAppointmentsYet')}</td></tr>
                 )}
               </tbody>
             </table>

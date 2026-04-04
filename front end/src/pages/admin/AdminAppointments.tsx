@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appointmentsApi, patientsApi, doctorsApi, clinicsApi, visitsApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ const emptyForm = {
 };
 
 const AdminAppointments = () => {
+  const { t } = useTranslation();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients]         = useState<any[]>([]);
   const [clinics, setClinics]           = useState<any[]>([]);
@@ -127,7 +129,7 @@ const AdminAppointments = () => {
   // ── Save (create or update) ───────────────────────────────────────────────
   const handleSave = async () => {
     if (!form.patientId || !form.doctorId || !form.clinicId || !form.date || !form.time) {
-      toast.error('Patient, doctor, department, date and time are required');
+      toast.error(t('patientDoctorDepartmentDateTimeRequired'));
       return;
     }
     setSaving(true);
@@ -139,18 +141,18 @@ const AdminAppointments = () => {
         if (form.status === 'completed' && editing.status !== 'completed') {
           await maybeCreateVisit(updated);
         }
-        toast.success('Appointment updated');
+        toast.success(t('appointmentUpdated'));
       } else {
         const { data: created } = await appointmentsApi.create({
           patientId: form.patientId, doctorId: form.doctorId, clinicId: form.clinicId,
           date: form.date, time: form.time, notes: form.notes, diagnosis: form.diagnosis,
         });
         setAppointments(prev => [created, ...prev]);
-        toast.success('Appointment created');
+        toast.success(t('appointmentCreated'));
       }
       setDialogOpen(false);
     } catch (e: any) {
-      toast.error(e.response?.data?.message ?? 'Failed to save appointment');
+      toast.error(e.response?.data?.message ?? t('failedSaveAppointment'));
     } finally {
       setSaving(false);
     }
@@ -164,9 +166,9 @@ const AdminAppointments = () => {
       if (newStatus === 'completed' && a.status !== 'completed') {
         await maybeCreateVisit(updated);
       }
-      toast.success(`Status changed to ${newStatus}`);
+      toast.success(`${t('statusChangedTo')} ${newStatus}`);
     } catch {
-      toast.error('Failed to update status');
+      toast.error(t('failedUpdateStatus'));
     }
   };
 
@@ -176,9 +178,9 @@ const AdminAppointments = () => {
     try {
       await appointmentsApi.delete(deleteTarget._id);
       setAppointments(prev => prev.map(x => x._id === deleteTarget._id ? { ...x, status: 'deleted' as AppointmentStatus } : x));
-      toast.success('Appointment marked as deleted');
+      toast.success(t('appointmentDeleted'));
     } catch {
-      toast.error('Failed to delete appointment');
+      toast.error(t('failedDeleteAppointment'));
     } finally {
       setDeleteTarget(null);
     }
@@ -208,15 +210,15 @@ const AdminAppointments = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Appointments</h2>
-          <p className="text-sm text-muted-foreground">Full lifecycle management for all appointments.</p>
+          <h2 className="font-display text-2xl font-bold text-foreground">{t('appointmentsTitle')}</h2>
+          <p className="text-sm text-muted-foreground">{t('appointmentsSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={loadAppointments} title="Refresh">
+          <Button variant="outline" size="icon" onClick={loadAppointments} title={t('refresh')}>
             <RefreshCw className="w-4 h-4" />
           </Button>
           <Button onClick={openCreate} className="gradient-primary border-0 text-primary-foreground">
-            <Plus className="w-4 h-4 mr-2" /> New Appointment
+            <Plus className="w-4 h-4 mr-2" /> {t('newAppointment')}
           </Button>
         </div>
       </div>
@@ -227,7 +229,7 @@ const AdminAppointments = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Search patient, doctor, department..."
+            placeholder={t('searchAppointmentsPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -237,7 +239,7 @@ const AdminAppointments = () => {
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
         >
-          <option value="all">All Statuses</option>
+          <option value="all">{t('allStatuses')}</option>
           {STATUS_OPTIONS.map(s => (
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
@@ -249,25 +251,25 @@ const AdminAppointments = () => {
         <CardContent className="pt-4 overflow-x-auto">
           {loading ? (
             <div className="py-16 flex items-center justify-center gap-2 text-muted-foreground">
-              <Loader2 className="w-5 h-5 animate-spin" /> Loading appointments...
+              <Loader2 className="w-5 h-5 animate-spin" /> {t('loadingAppointments')}
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="text-left py-2 font-medium">Patient</th>
-                  <th className="text-left py-2 font-medium hidden md:table-cell">Doctor</th>
-                  <th className="text-left py-2 font-medium hidden lg:table-cell">Department</th>
-                  <th className="text-left py-2 font-medium">Date & Time</th>
-                  <th className="text-left py-2 font-medium">Status</th>
-                  <th className="text-right py-2 font-medium">Actions</th>
+                  <th className="text-left py-2 font-medium">{t('patient')}</th>
+                  <th className="text-left py-2 font-medium hidden md:table-cell">{t('doctor')}</th>
+                  <th className="text-left py-2 font-medium hidden lg:table-cell">{t('department')}</th>
+                  <th className="text-left py-2 font-medium">{t('date')} & {t('time')}</th>
+                  <th className="text-left py-2 font-medium">{t('status')}</th>
+                  <th className="text-right py-2 font-medium">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {displayed.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-muted-foreground">
-                      No appointments found.
+                      {t('noAppointmentsFound')}
                     </td>
                   </tr>
                 )}
@@ -301,7 +303,7 @@ const AdminAppointments = () => {
                         variant="ghost" size="icon"
                         onClick={() => openEdit(a)}
                         disabled={a.status === 'deleted'}
-                        title="Edit"
+                        title={t('edit')}
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -310,7 +312,7 @@ const AdminAppointments = () => {
                         onClick={() => setDeleteTarget(a)}
                         disabled={a.status === 'deleted'}
                         className="text-destructive hover:text-destructive"
-                        title="Soft delete"
+                        title={t('softDelete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -328,16 +330,16 @@ const AdminAppointments = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {editing ? 'Edit Appointment' : 'New Appointment'}
+              {editing ? t('editAppointment') : t('newAppointment')}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
             {/* Patient */}
             <div>
-              <Label>Patient</Label>
+              <Label>{t('patient')}</Label>
               <Select value={form.patientId} onValueChange={v => setForm(f => ({ ...f, patientId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('selectPatient')} /></SelectTrigger>
                 <SelectContent>
                   {patients.map(p => <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>)}
                 </SelectContent>
@@ -346,12 +348,12 @@ const AdminAppointments = () => {
 
             {/* Department */}
             <div>
-              <Label>Department</Label>
+              <Label>{t('department')}</Label>
               <Select
                 value={form.clinicId}
                 onValueChange={v => setForm(f => ({ ...f, clinicId: v, doctorId: '' }))}
               >
-                <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('selectDepartment')} /></SelectTrigger>
                 <SelectContent>
                   {clinics.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
                 </SelectContent>
@@ -360,9 +362,9 @@ const AdminAppointments = () => {
 
             {/* Doctor */}
             <div>
-              <Label>Doctor</Label>
+              <Label>{t('doctor')}</Label>
               <Select value={form.doctorId} onValueChange={v => setForm(f => ({ ...f, doctorId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('selectDoctor')} /></SelectTrigger>
                 <SelectContent>
                   {filteredDoctors.map(d => (
                     <SelectItem key={d._id} value={d._id}>{d.name} — {d.specialization}</SelectItem>
@@ -374,14 +376,14 @@ const AdminAppointments = () => {
             {/* Date & Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Date</Label>
+                <Label>{t('date')}</Label>
                 <DatePicker
                   value={form.date}
                   onChange={v => setForm(f => ({ ...f, date: v }))}
                 />
               </div>
               <div>
-                <Label>Time</Label>
+                <Label>{t('time')}</Label>
                 <TimePicker
                   value={form.time}
                   onChange={v => setForm(f => ({ ...f, time: v }))}
@@ -392,7 +394,7 @@ const AdminAppointments = () => {
             {/* Status (edit only) */}
             {editing && (
               <div>
-                <Label>Status</Label>
+                <Label>{t('status')}</Label>
                 <Select
                   value={form.status}
                   onValueChange={v => setForm(f => ({ ...f, status: v as AppointmentStatus }))}
@@ -409,10 +411,10 @@ const AdminAppointments = () => {
 
             {/* Notes */}
             <div>
-              <Label>Notes</Label>
+              <Label>{t('notes')}</Label>
               <Textarea
                 rows={3}
-                placeholder="Optional notes..."
+                placeholder={t('optionalNotes')}
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               />
@@ -420,9 +422,9 @@ const AdminAppointments = () => {
 
             {/* Diagnosis */}
             <div>
-              <Label>Diagnosis</Label>
+              <Label>{t('diagnosis')}</Label>
               <Input
-                placeholder="Optional diagnosis..."
+                placeholder={t('optionalDiagnosis')}
                 value={form.diagnosis}
                 onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))}
               />
@@ -431,7 +433,7 @@ const AdminAppointments = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleSave}
@@ -439,7 +441,7 @@ const AdminAppointments = () => {
               className="gradient-primary border-0 text-primary-foreground"
             >
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editing ? 'Update' : 'Create'}
+              {editing ? t('update') : t('create')}
             </Button>
           </DialogFooter>
         </DialogContent>

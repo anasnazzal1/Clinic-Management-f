@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 import {
   LogOut, Menu, X, Building2, Users, Stethoscope, UserPlus,
   CalendarPlus, Calendar, ClipboardList, User, FileText, LayoutDashboard, KeyRound
@@ -17,31 +19,31 @@ interface NavItem {
 
 const navItems: Record<string, NavItem[]> = {
   admin: [
-    { label: 'Dashboard',      path: '/admin',                icon: LayoutDashboard },
-    { label: 'Departments',    path: '/admin/clinics',        icon: Building2 },
-    { label: 'Doctors',        path: '/admin/doctors',        icon: Stethoscope },
-    { label: 'Patients',       path: '/admin/patients',       icon: Users },
-    { label: 'Receptionists',  path: '/admin/receptionists',  icon: UserPlus },
-    { label: 'Appointments',   path: '/admin/appointments',   icon: Calendar },
-    { label: 'My Profile',      path: '/change-password',      icon: KeyRound },
+    { label: 'dashboard',      path: '/admin',                icon: LayoutDashboard },
+    { label: 'departments',    path: '/admin/clinics',        icon: Building2 },
+    { label: 'doctors',        path: '/admin/doctors',        icon: Stethoscope },
+    { label: 'patients',       path: '/admin/patients',       icon: Users },
+    { label: 'receptionists',  path: '/admin/receptionists',  icon: UserPlus },
+    { label: 'appointments',   path: '/admin/appointments',   icon: Calendar },
+    { label: 'myProfile',      path: '/change-password',      icon: KeyRound },
   ],
   doctor: [
-    { label: 'Dashboard',       path: '/doctor',              icon: LayoutDashboard },
-    { label: 'Appointments',    path: '/doctor/appointments', icon: Calendar },
-    { label: 'My Profile',      path: '/change-password',     icon: KeyRound },
+    { label: 'dashboard',       path: '/doctor',              icon: LayoutDashboard },
+    { label: 'appointments',    path: '/doctor/appointments', icon: Calendar },
+    { label: 'myProfile',       path: '/change-password',     icon: KeyRound },
   ],
   receptionist: [
-    { label: 'Dashboard',       path: '/reception',                icon: LayoutDashboard },
-    { label: 'Add Patient',     path: '/reception/add-patient',    icon: UserPlus },
-    { label: 'Book Appointment',path: '/reception/book',           icon: CalendarPlus },
-    { label: 'Appointments',    path: '/reception/appointments',   icon: Calendar },
-    { label: 'My Profile',      path: '/change-password',          icon: KeyRound },
+    { label: 'dashboard',       path: '/reception',                icon: LayoutDashboard },
+    { label: 'addPatient',      path: '/reception/add-patient',    icon: UserPlus },
+    { label: 'bookAppointment', path: '/reception/book',           icon: CalendarPlus },
+    { label: 'appointments',    path: '/reception/appointments',   icon: Calendar },
+    { label: 'myProfile',       path: '/change-password',          icon: KeyRound },
   ],
   patient: [
-    { label: 'Dashboard',       path: '/patient',             icon: LayoutDashboard },
-    { label: 'Appointments',    path: '/patient/appointments',icon: Calendar },
-    { label: 'Medical History', path: '/patient/history',     icon: FileText },
-    { label: 'My Profile',      path: '/change-password',     icon: KeyRound },
+    { label: 'dashboard',       path: '/patient',             icon: LayoutDashboard },
+    { label: 'appointments',    path: '/patient/appointments',icon: Calendar },
+    { label: 'medicalHistory',  path: '/patient/history',     icon: FileText },
+    { label: 'myProfile',       path: '/change-password',     icon: KeyRound },
   ],
 };
 
@@ -50,6 +52,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { t } = useTranslation();
 
   if (!user) return null;
 
@@ -76,7 +80,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <Stethoscope className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-sm text-sidebar-accent-foreground">MediCare Clinic</span>
+          <span className="font-display font-bold text-sm text-sidebar-accent-foreground">{t('appName')}</span>
           <button className="ml-auto lg:hidden text-sidebar-foreground" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
@@ -98,7 +102,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 )}
               >
                 <item.icon className="w-4 h-4" />
-                {item.label}
+                {t(item.label)}
               </Link>
             );
           })}
@@ -125,7 +129,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            {t('signOut')}
           </button>
         </div>
       </aside>
@@ -137,8 +141,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             <Menu className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="font-display font-semibold text-foreground text-lg truncate">
-            {items.find(i => location.pathname.startsWith(i.path) && (i.path !== '/admin' || location.pathname === '/admin'))?.label || 'Dashboard'}
+            {t(items.find(i => location.pathname.startsWith(i.path) && (i.path !== '/admin' || location.pathname === '/admin'))?.label ?? 'dashboard')}
           </h1>
+          <div className="ml-auto">
+            <LanguageSwitcher />
+          </div>
         </header>
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           {children}

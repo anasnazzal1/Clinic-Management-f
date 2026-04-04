@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { doctorsApi, clinicsApi, usersApi } from '@/lib/api';
 import { validateCredentials, hasCredentialErrors, type CredentialErrors } from '@/lib/validateCredentials';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,6 +51,7 @@ const emptyForm = {
 };
 
 const DoctorsManagement = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<any[]>([]);
   const [clinics, setClinics] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -102,8 +104,8 @@ const DoctorsManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.specialization.trim()) { toast.error('Name and specialization are required'); return; }
-    if (form.startTime && form.endTime && form.endTime <= form.startTime) { toast.error('End time must be after start time'); return; }
+    if (!form.name.trim() || !form.specialization.trim()) { toast.error(t('nameAndSpecializationRequired')); return; }
+    if (form.startTime && form.endTime && form.endTime <= form.startTime) { toast.error(t('endTimeAfterStart')); return; }
 
     if (!editing) {
       // Credentials are optional for doctors, but if either field is filled both must be valid
@@ -141,23 +143,23 @@ const DoctorsManagement = () => {
             await usersApi.update(form.linkedUserId, userPatch);
           }
         }
-        toast.success('Doctor updated');
+        toast.success(t('doctorUpdated'));
       } else {
         const { data: created } = await doctorsApi.create(payload);
         if (form.username && form.password) {
           await usersApi.register({ username: form.username, password: form.password, role: 'doctor', name: form.name, email: form.email, linkedId: created._id });
         }
         setData(d => [...d, created]);
-        toast.success('Doctor added');
+        toast.success(t('doctorAdded'));
       }
       setOpen(false);
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save doctor'); }
+    } catch (e: any) { toast.error(e.response?.data?.message || t('failedSaveDoctor')); }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    try { await doctorsApi.delete(deleteTarget._id); setData(d => d.filter(doc => doc._id !== deleteTarget._id)); toast.success('Doctor deleted'); }
-    catch { toast.error('Failed to delete doctor'); }
+    try { await doctorsApi.delete(deleteTarget._id); setData(d => d.filter(doc => doc._id !== deleteTarget._id)); toast.success(t('doctorDeleted')); }
+    catch { toast.error(t('failedDeleteDoctor')); }
     finally { setDeleteTarget(null); }
   };
 
@@ -171,19 +173,19 @@ const DoctorsManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div><h2 className="font-display text-2xl font-bold text-foreground">Doctors</h2><p className="text-sm text-muted-foreground">Manage doctor profiles and assignments.</p></div>
-        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"><Plus className="w-4 h-4 mr-2" /> Add Doctor</Button>
+        <div><h2 className="font-display text-2xl font-bold text-foreground">{t('doctorsTitle')}</h2><p className="text-sm text-muted-foreground">{t('doctorsSubtitle')}</p></div>
+        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300"><Plus className="w-4 h-4 mr-2" /> {t('addDoctor')}</Button>
       </div>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search doctors..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder={t('searchDoctorsPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <Card className="shadow-card">
         <CardContent className="pt-4 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">Doctor</th><th className="text-left py-2 font-medium">Specialization</th><th className="text-left py-2 font-medium hidden md:table-cell">Department</th><th className="text-left py-2 font-medium hidden lg:table-cell">Schedule</th><th className="text-right py-2 font-medium">Actions</th></tr></thead>
+            <thead><tr className="border-b text-muted-foreground"><th className="text-left py-2 font-medium">{t('doctorName')}</th><th className="text-left py-2 font-medium">{t('specialization')}</th><th className="text-left py-2 font-medium hidden md:table-cell">{t('department')}</th><th className="text-left py-2 font-medium hidden lg:table-cell">{t('schedule')}</th><th className="text-right py-2 font-medium">{t('actions')}</th></tr></thead>
             <tbody>
-              {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No doctors found.</td></tr>}
+              {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">{t('noDoctorsFound')}</td></tr>}
               {data.map(d => (
                 <tr key={d._id} className="border-b last:border-0">
                   <td className="py-2.5">
@@ -220,7 +222,7 @@ const DoctorsManagement = () => {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="font-display">{editing ? 'Edit' : 'Add'} Doctor</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">{editing ? t('editDoctor') : t('addDoctorDialog')}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {/* Avatar — only shown when editing and a linked user exists */}
             {editing && form.linkedUserId && (
@@ -238,21 +240,21 @@ const DoctorsManagement = () => {
                 />
               </div>
             )}
-            <div><Label>Full Name</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
-            <div><Label>Specialization</Label><Input value={form.specialization} onChange={e => setField('specialization', e.target.value)} /></div>
+            <div><Label>{t('fullName')}</Label><Input value={form.name} onChange={e => setField('name', e.target.value)} /></div>
+            <div><Label>{t('specialization')}</Label><Input value={form.specialization} onChange={e => setField('specialization', e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
-              <div><Label>Email</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
+              <div><Label>{t('phone')}</Label><Input value={form.phone} onChange={e => setField('phone', e.target.value)} /></div>
+              <div><Label>{t('email')}</Label><Input value={form.email} onChange={e => setField('email', e.target.value)} /></div>
             </div>
             <div>
-              <Label>Department</Label>
+              <Label>{t('department')}</Label>
               <Select value={form.clinicId} onValueChange={v => setForm(f => ({ ...f, clinicId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('selectDepartment')} /></SelectTrigger>
                 <SelectContent>{clinics.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Working Days</Label>
+              <Label>{t('workingDays')}</Label>
               <div className="flex flex-wrap gap-3 mt-2">
                 {ALL_DAYS.map(day => (
                   <div key={day} className="flex items-center gap-1.5">
@@ -263,25 +265,25 @@ const DoctorsManagement = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Start Time</Label><TimePicker value={form.startTime} onChange={v => setForm(f => ({ ...f, startTime: v }))} placeholder="Start time" /></div>
-              <div><Label>End Time</Label><TimePicker value={form.endTime} onChange={v => setForm(f => ({ ...f, endTime: v }))} placeholder="End time" minTime={form.startTime} /></div>
+              <div><Label>{t('startTime')}</Label><TimePicker value={form.startTime} onChange={v => setForm(f => ({ ...f, startTime: v }))} placeholder={t('startTime')} /></div>
+              <div><Label>{t('endTime')}</Label><TimePicker value={form.endTime} onChange={v => setForm(f => ({ ...f, endTime: v }))} placeholder={t('endTime')} minTime={form.startTime} /></div>
             </div>
 
             {editing ? (
               // ── Edit mode: show credentials section only if a linked user exists or after fetch
               <>
                 <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-foreground mb-1">Login Credentials</p>
+                  <p className="text-sm font-medium text-foreground mb-1">{t('loginCredentials')}</p>
                   <p className="text-xs text-muted-foreground mb-3">
                     {form.linkedUserId
-                      ? 'Username is pre-filled. Leave password empty to keep it unchanged.'
-                      : 'No user account linked to this doctor yet.'}
+                      ? t('usernamePrefilled')
+                      : t('noUserAccount')}
                   </p>
                 </div>
                 {form.linkedUserId && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label>Username</Label>
+                      <Label>{t('username')}</Label>
                       <Input
                         value={form.username}
                         onChange={e => setField('username', e.target.value)}
@@ -292,12 +294,12 @@ const DoctorsManagement = () => {
                       )}
                     </div>
                     <div className="space-y-1">
-                      <Label>New Password <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                      <Label>{t('newPassword')} <span className="text-muted-foreground font-normal">({t('optional')})</span></Label>
                       <Input
                         type="password"
                         value={form.password}
                         onChange={e => setField('password', e.target.value)}
-                        placeholder="Leave empty to keep current"
+                        placeholder={t('leaveEmpty')}
                         className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
                       />
                       {credErrors.password && (
@@ -310,30 +312,30 @@ const DoctorsManagement = () => {
             ) : (
               <>
                 <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-foreground mb-1">Login Credentials <span className="text-muted-foreground font-normal">(optional)</span></p>
-                  <p className="text-xs text-muted-foreground mb-3">If provided, both fields are required and must meet the rules below.</p>
+                  <p className="text-sm font-medium text-foreground mb-1">{t('loginCredentials')} <span className="text-muted-foreground font-normal">({t('optional')})</span></p>
+                  <p className="text-xs text-muted-foreground mb-3">{t('credentialsRequired')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label>Username</Label>
+                    <Label>{t('username')}</Label>
                     <Input
                       value={form.username}
                       onChange={e => setField('username', e.target.value)}
                       className={credErrors.username ? 'border-destructive focus-visible:ring-destructive' : ''}
-                      placeholder="min. 4 chars, no spaces"
+                      placeholder={t('usernamePlaceholder')}
                     />
                     {credErrors.username && (
                       <p className="text-xs text-destructive">{credErrors.username}</p>
                     )}
                   </div>
                   <div className="space-y-1">
-                    <Label>Password</Label>
+                    <Label>{t('password')}</Label>
                     <Input
                       type="password"
                       value={form.password}
                       onChange={e => setField('password', e.target.value)}
                       className={credErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                      placeholder="min. 6 chars, letter + number"
+                      placeholder={t('passwordPlaceholder')}
                     />
                     {credErrors.password && (
                       <p className="text-xs text-destructive">{credErrors.password}</p>
@@ -343,7 +345,7 @@ const DoctorsManagement = () => {
               </>
             )}
           </div>
-          <DialogFooter><Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{editing ? 'Update' : 'Add'}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">{editing ? t('update') : t('add')}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
