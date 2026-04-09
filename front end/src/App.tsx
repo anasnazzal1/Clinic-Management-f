@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 
 import Landing from "./pages/Landing";
@@ -23,6 +24,7 @@ import DoctorPatientProfile from "./pages/doctor/DoctorPatientProfile";
 import { ReceptionistDashboard, AddPatientPage, BookAppointmentPage, ReceptionAppointmentsPage } from "./pages/receptionist/ReceptionistPages";
 import { PatientDashboard, PatientAppointmentsPage, PatientHistoryPage } from "./pages/patient/PatientPages";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
+import { MessagesPage } from "./pages/MessagesPage";
 import React from "react";
 
 const queryClient = new QueryClient();
@@ -40,7 +42,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
+        <ChatProvider>
+          <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
@@ -58,22 +61,26 @@ const App = () => (
             <Route path="/doctor" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorDashboard /></ProtectedRoute>} />
             <Route path="/doctor/appointments" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorAppointmentsPage /></ProtectedRoute>} />
             <Route path="/doctor/patients/:id" element={<ProtectedRoute allowedRoles={['doctor']}><DoctorPatientProfile /></ProtectedRoute>} />
+            <Route path="/doctor/messages" element={<ProtectedRoute allowedRoles={['doctor']}><MessagesPage /></ProtectedRoute>} />
 
             {/* Receptionist */}
             <Route path="/reception" element={<ProtectedRoute allowedRoles={['receptionist']}><ReceptionistDashboard /></ProtectedRoute>} />
             <Route path="/reception/add-patient" element={<ProtectedRoute allowedRoles={['receptionist']}><AddPatientPage /></ProtectedRoute>} />
             <Route path="/reception/book" element={<ProtectedRoute allowedRoles={['receptionist']}><BookAppointmentPage /></ProtectedRoute>} />
             <Route path="/reception/appointments" element={<ProtectedRoute allowedRoles={['receptionist']}><ReceptionAppointmentsPage /></ProtectedRoute>} />
+            <Route path="/reception/messages" element={<ProtectedRoute allowedRoles={['receptionist']}><MessagesPage /></ProtectedRoute>} />
 
             {/* Patient */}
             <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientDashboard /></ProtectedRoute>} />
             <Route path="/patient/appointments" element={<ProtectedRoute allowedRoles={['patient']}><PatientAppointmentsPage /></ProtectedRoute>} />
             <Route path="/patient/history" element={<ProtectedRoute allowedRoles={['patient']}><PatientHistoryPage /></ProtectedRoute>} />
+            <Route path="/patient/messages" element={<ProtectedRoute allowedRoles={['patient']}><MessagesPage /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
             <Route path="/change-password" element={<ProtectedRoute allowedRoles={['admin','doctor','receptionist','patient']}><ChangePasswordPage /></ProtectedRoute>} />
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </ChatProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

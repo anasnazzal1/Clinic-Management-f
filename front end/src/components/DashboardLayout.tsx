@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import {
   LogOut, Menu, X, Building2, Users, Stethoscope, UserPlus,
-  CalendarPlus, Calendar, ClipboardList, User, FileText, LayoutDashboard, KeyRound
+  CalendarPlus, Calendar, ClipboardList, User, FileText, LayoutDashboard, KeyRound, MessageCircle
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,6 +32,7 @@ const navItems: Record<string, NavItem[]> = {
   doctor: [
     { label: 'dashboard',       path: '/doctor',              icon: LayoutDashboard },
     { label: 'appointments',    path: '/doctor/appointments', icon: Calendar },
+    { label: 'messages',        path: '/doctor/messages',     icon: MessageCircle },
     { label: 'myProfile',       path: '/change-password',     icon: KeyRound },
   ],
   receptionist: [
@@ -37,11 +40,13 @@ const navItems: Record<string, NavItem[]> = {
     { label: 'addPatient',      path: '/reception/add-patient',    icon: UserPlus },
     { label: 'bookAppointment', path: '/reception/book',           icon: CalendarPlus },
     { label: 'appointments',    path: '/reception/appointments',   icon: Calendar },
+    { label: 'messages',        path: '/reception/messages',       icon: MessageCircle },
     { label: 'myProfile',       path: '/change-password',          icon: KeyRound },
   ],
   patient: [
     { label: 'dashboard',       path: '/patient',             icon: LayoutDashboard },
     { label: 'appointments',    path: '/patient/appointments',icon: Calendar },
+    { label: 'messages',        path: '/patient/messages',    icon: MessageCircle },
     { label: 'medicalHistory',  path: '/patient/history',     icon: FileText },
     { label: 'myProfile',       path: '/change-password',     icon: KeyRound },
   ],
@@ -49,6 +54,7 @@ const navItems: Record<string, NavItem[]> = {
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useChat();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -89,6 +95,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {items.map(item => {
             const active = location.pathname === item.path;
+            const isMessages = item.label === 'messages';
             return (
               <Link
                 key={item.path}
@@ -102,7 +109,12 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 )}
               >
                 <item.icon className="w-4 h-4" />
-                {t(item.label)}
+                <span className="flex-1">{t(item.label)}</span>
+                {isMessages && unreadCount > 0 && (
+                  <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                    {unreadCount}
+                  </Badge>
+                )}
               </Link>
             );
           })}

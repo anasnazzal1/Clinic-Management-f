@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { appointmentsApi, visitsApi, patientsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
-import { User, Calendar, Printer } from 'lucide-react';
+import { User, Calendar, Printer, Stethoscope } from 'lucide-react';
 import PatientPrintView from '@/components/PatientPrintView';
+import { ChatButton } from '@/components/chat/ChatButton';
 
 export const PatientDashboard = () => {
   const { user } = useAuth();
@@ -18,6 +19,15 @@ export const PatientDashboard = () => {
   const upcoming = appts.filter(a => a.status === 'pending');
   const completed = appts.filter(a => a.status === 'completed');
 
+  // Get unique doctors from appointments
+  const doctors = Array.from(
+    new Map(
+      appts
+        .filter(a => a.doctorId)
+        .map(a => [a.doctorId._id, a.doctorId])
+    ).values()
+  );
+
   return (
     <div className="space-y-6">
       <div><h2 className="font-display text-2xl font-bold text-foreground">Welcome, {user?.name}</h2><p className="text-sm text-muted-foreground">Your health dashboard.</p></div>
@@ -26,6 +36,49 @@ export const PatientDashboard = () => {
         <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-warning">{upcoming.length}</div><div className="text-xs text-muted-foreground mt-1">Upcoming Appointments</div></CardContent></Card>
         <Card className="shadow-card"><CardContent className="pt-5 text-center"><div className="font-display text-3xl font-bold text-success">{completed.length}</div><div className="text-xs text-muted-foreground mt-1">Past Visits</div></CardContent></Card>
       </div>
+
+      {/* My Doctors */}
+      <Card className="shadow-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-base flex items-center gap-2">
+            <Stethoscope className="w-4 h-4 text-primary" />
+            My Doctors
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {doctors.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No doctors yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {doctors.map(doctor => (
+                <div key={doctor._id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
+                      <span className="text-sm font-bold text-primary-foreground">
+                        {doctor.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{doctor.name}</p>
+                      {doctor.specialization && (
+                        <p className="text-sm text-muted-foreground">{doctor.specialization}</p>
+                      )}
+                    </div>
+                  </div>
+                  <ChatButton
+                    doctorId={doctor._id}
+                    patientId={user?.linkedId || ''}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Chat
+                  </ChatButton>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

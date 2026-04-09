@@ -18,6 +18,7 @@ const patients_module_1 = require("./patients/patients.module");
 const receptionists_module_1 = require("./receptionists/receptionists.module");
 const appointments_module_1 = require("./appointments/appointments.module");
 const visits_module_1 = require("./visits/visits.module");
+const chat_module_1 = require("./chat/chat.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -34,6 +35,7 @@ exports.AppModule = AppModule = __decorate([
             receptionists_module_1.ReceptionistsModule,
             appointments_module_1.AppointmentsModule,
             visits_module_1.VisitsModule,
+            chat_module_1.ChatModule,
         ],
     })
 ], AppModule);

@@ -85,6 +85,16 @@ export const visitsApi = {
   create: (data: any) => api.post('/visits', data),
 };
 
+// Chat
+export const chatApi = {
+  createConversation: (data: { doctorId: string; patientId: string }) => api.post('/chat/conversations', data),
+  getConversations: () => api.get('/chat/conversations'),
+  getMessages: (conversationId: string) => api.get(`/chat/messages/${conversationId}`),
+  sendMessage: (data: { conversationId: string; message: string }) => api.post('/chat/messages', data),
+  markAsRead: (conversationId: string) => api.patch(`/chat/messages/read/${conversationId}`),
+  getUnreadCount: () => api.get('/chat/unread-count'),
+};
+
 // Users (admin)
 export const usersApi = {
   getAll: (role?: string) => api.get('/users', { params: { role } }),

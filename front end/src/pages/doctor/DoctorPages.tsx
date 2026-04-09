@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { StatusBadge } from '@/components/StatusBadge';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
+import { ChatButton } from '@/components/chat/ChatButton';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -105,22 +106,29 @@ export const DoctorDashboard = () => {
           ) : (
             <div className="divide-y">
               {filteredPatients.map(p => (
-                <button
-                  key={p._id ?? p}
-                  onClick={() => goToPatient(p._id ?? p)}
-                  className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-muted/40 rounded-lg px-2 transition-colors group"
-                >
-                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-primary-foreground">
-                      {(p.name ?? '?').split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{p.name ?? '—'}</p>
-                    {p.phone && <p className="text-xs text-muted-foreground truncate">{p.phone}</p>}
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
+                <div key={p._id ?? p} className="flex items-center gap-3 py-2.5 px-2 hover:bg-muted/40 rounded-lg group">
+                  <button
+                    onClick={() => goToPatient(p._id ?? p)}
+                    className="flex items-center gap-3 flex-1 text-left"
+                  >
+                    <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-primary-foreground">
+                        {(p.name ?? '?').split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{p.name ?? '—'}</p>
+                      {p.phone && <p className="text-xs text-muted-foreground truncate">{p.phone}</p>}
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                  <ChatButton
+                    doctorId={user?.linkedId || ''}
+                    patientId={p._id ?? p}
+                    variant="ghost"
+                    size="sm"
+                  />
+                </div>
               ))}
             </div>
           )}
