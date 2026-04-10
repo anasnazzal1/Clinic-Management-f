@@ -28,11 +28,11 @@ interface Conversation {
     _id: string;
     name: string;
     specialization?: string;
-  };
+  } | null;
   patientId: {
     _id: string;
     name: string;
-  };
+  } | null;
   createdAt: string;
   lastMessage?: Message;
   unreadCount?: number;
@@ -114,7 +114,7 @@ export const MessagesPage = () => {
 
   const getConversationDisplayName = (conversation: Conversation) => {
     const userRole = JSON.parse(localStorage.getItem('clinicUser') || '{}').role;
-    return userRole === 'doctor' ? conversation.patientId.name : conversation.doctorId.name;
+    return userRole === 'doctor' ? conversation.patientId?.name || 'Unknown Patient' : conversation.doctorId?.name || 'Unknown Doctor';
   };
 
   const getMessageAlignment = (message: Message) => {
