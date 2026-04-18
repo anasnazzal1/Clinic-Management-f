@@ -18,6 +18,7 @@ const passport_1 = require("@nestjs/passport");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const doctor_schema_1 = require("./doctor.schema");
+const user_schema_1 = require("../users/user.schema");
 const roles_decorator_1 = require("../common/roles.decorator");
 const roles_guard_1 = require("../common/roles.guard");
 const class_validator_1 = require("class-validator");
@@ -71,22 +72,50 @@ __decorate([
 ], DoctorDto.prototype, "avatar", void 0);
 let DoctorsController = class DoctorsController {
     model;
-    constructor(model) {
+    userModel;
+    constructor(model, userModel) {
         this.model = model;
+        this.userModel = userModel;
     }
-    findAll(clinicId, search) {
+    async findAll(clinicId, search) {
         const filter = {};
-        if (clinicId)
-            filter.clinicId = clinicId;
+        if (clinicId) {
+            if (mongoose_2.Types.ObjectId.isValid(clinicId)) {
+                filter.clinicId = { $in: [clinicId, new mongoose_2.Types.ObjectId(clinicId)] };
+            }
+            else {
+                filter.clinicId = { $ne: null };
+            }
+        }
         if (search)
             filter.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { specialization: { $regex: search, $options: 'i' } },
             ];
-        return this.model.find(filter).populate('clinicId', 'name');
+        const doctors = await this.model.find(filter).populate('clinicId', 'name').lean();
+        const doctorIds = doctors.map(d => d._id.toString());
+        const linkedUsers = await this.userModel
+            .find({ role: 'doctor', linkedId: { $in: doctorIds } })
+            .select('linkedId profileImage')
+            .lean();
+        const imageByLinkedId = new Map(linkedUsers.map(u => [u.linkedId, u.profileImage]));
+        return doctors.map((doctor) => ({
+            ...doctor,
+            profileImage: doctor.avatar || imageByLinkedId.get(doctor._id.toString()) || null,
+        }));
     }
-    findOne(id) {
-        return this.model.findById(id).populate('clinicId', 'name');
+    async findOne(id) {
+        const doctor = await this.model.findById(id).populate('clinicId', 'name').lean();
+        if (!doctor)
+            return null;
+        const linkedUser = await this.userModel
+            .findOne({ role: 'doctor', linkedId: doctor._id.toString() })
+            .select('profileImage')
+            .lean();
+        return {
+            ...doctor,
+            profileImage: doctor.avatar || linkedUser?.profileImage || null,
+        };
     }
     create(dto) {
         return this.model.create(dto);
@@ -105,14 +134,14 @@ __decorate([
     __param(1, (0, common_1.Query)('search')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], DoctorsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], DoctorsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
@@ -145,6 +174,8 @@ __decorate([
 exports.DoctorsController = DoctorsController = __decorate([
     (0, common_1.Controller)('doctors'),
     __param(0, (0, mongoose_1.InjectModel)(doctor_schema_1.Doctor.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __param(1, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model])
 ], DoctorsController);
 //# sourceMappingURL=doctors.controller.js.map

@@ -64,7 +64,14 @@ let AuthService = class AuthService {
         if (!user || !(await bcrypt.compare(password, user.password))) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        const payload = { sub: user._id, username: user.username, role: user.role, linkedId: user.linkedId, name: user.name };
+        const payload = {
+            sub: user._id,
+            username: user.username,
+            role: user.role,
+            linkedId: user.linkedId,
+            name: user.name,
+            email: user.email,
+        };
         return {
             access_token: this.jwtService.sign(payload),
             user: { id: user._id, username: user.username, role: user.role, name: user.name, email: user.email, linkedId: user.linkedId, profileImage: user.profileImage },

@@ -26,6 +26,7 @@ import { PatientDashboard, PatientAppointmentsPage, PatientHistoryPage } from ".
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import React from "react";
+import { canAccessMessages } from "@/lib/permissions";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!allowedRoles.includes(user!.role)) return <Navigate to="/" replace />;
   return <DashboardLayout>{children}</DashboardLayout>;
+};
+
+const ReceptionistMessagesRoute: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!canAccessMessages(user?.role)) return <Navigate to="/reception" replace />;
+  return <Navigate to="/" replace />;
 };
 
 const App = () => (
@@ -68,7 +76,10 @@ const App = () => (
             <Route path="/reception/add-patient" element={<ProtectedRoute allowedRoles={['receptionist']}><AddPatientPage /></ProtectedRoute>} />
             <Route path="/reception/book" element={<ProtectedRoute allowedRoles={['receptionist']}><BookAppointmentPage /></ProtectedRoute>} />
             <Route path="/reception/appointments" element={<ProtectedRoute allowedRoles={['receptionist']}><ReceptionAppointmentsPage /></ProtectedRoute>} />
-            <Route path="/reception/messages" element={<ProtectedRoute allowedRoles={['receptionist']}><MessagesPage /></ProtectedRoute>} />
+            <Route
+              path="/reception/messages"
+              element={<ReceptionistMessagesRoute />}
+            />
 
             {/* Patient */}
             <Route path="/patient" element={<ProtectedRoute allowedRoles={['patient']}><PatientDashboard /></ProtectedRoute>} />

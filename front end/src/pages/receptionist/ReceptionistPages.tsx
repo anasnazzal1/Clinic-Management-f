@@ -76,9 +76,16 @@ export const AddPatientPage = () => {
     setCredErrors(errors);
     if (hasCredentialErrors(errors)) return;
     try {
-      const { data: patient } = await patientsApi.create({ name: form.name, age: Number(form.age), gender: form.gender, phone: form.phone, email: form.email, address: form.address });
-      const { usersApi: ua } = await import('@/lib/api');
-      await ua.register({ username: form.username, password: form.password, role: 'patient', name: form.name, email: form.email, linkedId: patient._id });
+      await patientsApi.create({
+        name: form.name,
+        age: Number(form.age),
+        gender: form.gender,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+        username: form.username,
+        password: form.password,
+      });
       toast.success('Patient account created successfully');
       setForm(emptyForm);
       setCredErrors({});
@@ -153,15 +160,41 @@ export const BookAppointmentPage = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [clinics, setClinics] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
+  const [allDoctors, setAllDoctors] = useState<any[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+
+  const getDoctorClinicId = (doctor: any) => {
+    if (!doctor?.clinicId) return '';
+    if (typeof doctor.clinicId === 'object') return doctor.clinicId._id || '';
+    return doctor.clinicId;
+  };
 
   useEffect(() => {
     patientsApi.getAll().then(r => setPatients(r.data)).catch(() => {});
     clinicsApi.getAll().then(r => setClinics(r.data)).catch(() => {});
+    setLoadingDoctors(true);
+    doctorsApi.getAll()
+      .then(r => {
+        setAllDoctors(r.data);
+        setDoctors(r.data);
+      })
+      .catch(() => {
+        setAllDoctors([]);
+        setDoctors([]);
+      })
+      .finally(() => setLoadingDoctors(false));
   }, []);
 
   useEffect(() => {
-    doctorsApi.getAll({ clinicId: form.clinicId || undefined }).then(r => setDoctors(r.data)).catch(() => {});
-  }, [form.clinicId]);
+    if (!form.clinicId) {
+      setDoctors(allDoctors);
+      return;
+    }
+
+    // Local filtering keeps the list stable even if API filtering is inconsistent.
+    const filtered = allDoctors.filter(d => getDoctorClinicId(d) === form.clinicId);
+    setDoctors(filtered);
+  }, [form.clinicId, allDoctors]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,8 +231,14 @@ export const BookAppointmentPage = () => {
               <Label>Doctor</Label>
               <Select value={form.doctorId} onValueChange={v => setForm(f => ({ ...f, doctorId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                <SelectContent>{doctors.map(d => <SelectItem key={d._id} value={d._id}>{d.name} — {d.specialization}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {doctors.map(d => <SelectItem key={d._id} value={d._id}>{d.name} — {d.specialization}</SelectItem>)}
+                </SelectContent>
               </Select>
+              {loadingDoctors && <p className="text-xs text-muted-foreground mt-2">Loading doctors...</p>}
+              {!loadingDoctors && form.clinicId && doctors.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-2">No doctors available in this department.</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Date</Label><DatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} disabled={d => d < new Date(new Date().setHours(0, 0, 0, 0))} /></div>

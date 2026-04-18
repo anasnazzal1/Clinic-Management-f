@@ -1,8 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Doctor } from './doctor.schema';
+import { User } from '../users/user.schema';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { IsString, IsOptional } from 'class-validator';
@@ -20,22 +21,55 @@ class DoctorDto {
 
 @Controller('doctors')
 export class DoctorsController {
-  constructor(@InjectModel(Doctor.name) private model: Model<Doctor>) {}
+  constructor(
+    @InjectModel(Doctor.name) private model: Model<Doctor>,
+    @InjectModel(User.name) private userModel: Model<User>,
+  ) {}
 
   @Get()
-  findAll(@Query('clinicId') clinicId?: string, @Query('search') search?: string) {
+  async findAll(@Query('clinicId') clinicId?: string, @Query('search') search?: string) {
     const filter: any = {};
-    if (clinicId) filter.clinicId = clinicId;
+    if (clinicId) {
+      // Handle clinicId stored as ObjectId or plain string in legacy data.
+      if (Types.ObjectId.isValid(clinicId)) {
+        filter.clinicId = { $in: [clinicId, new Types.ObjectId(clinicId)] };
+      } else {
+        // Invalid/empty clinicId should not force empty result sets.
+        filter.clinicId = { $ne: null };
+      }
+    }
     if (search) filter.$or = [
       { name: { $regex: search, $options: 'i' } },
       { specialization: { $regex: search, $options: 'i' } },
     ];
-    return this.model.find(filter).populate('clinicId', 'name');
+    const doctors = await this.model.find(filter).populate('clinicId', 'name').lean();
+    const doctorIds = doctors.map(d => d._id.toString());
+    const linkedUsers = await this.userModel
+      .find({ role: 'doctor', linkedId: { $in: doctorIds } })
+      .select('linkedId profileImage')
+      .lean();
+
+    const imageByLinkedId = new Map(linkedUsers.map(u => [u.linkedId, u.profileImage]));
+    return doctors.map((doctor: any) => ({
+      ...doctor,
+      profileImage: doctor.avatar || imageByLinkedId.get(doctor._id.toString()) || null,
+    }));
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.model.findById(id).populate('clinicId', 'name');
+  async findOne(@Param('id') id: string) {
+    const doctor: any = await this.model.findById(id).populate('clinicId', 'name').lean();
+    if (!doctor) return null;
+
+    const linkedUser: any = await this.userModel
+      .findOne({ role: 'doctor', linkedId: doctor._id.toString() })
+      .select('profileImage')
+      .lean();
+
+    return {
+      ...doctor,
+      profileImage: doctor.avatar || linkedUser?.profileImage || null,
+    };
   }
 
   @Post()

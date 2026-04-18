@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
+import { canAccessMessages } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,7 +64,12 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   if (!user) return null;
 
-  const items = navItems[user.role] || [];
+  const items = (navItems[user.role] || []).filter(item => {
+    if (item.label === 'messages') {
+      return canAccessMessages(user.role);
+    }
+    return true;
+  });
 
   const handleLogout = () => {
     logout();
