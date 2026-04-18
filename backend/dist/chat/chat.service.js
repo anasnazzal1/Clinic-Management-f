@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var ChatService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatService = void 0;
 const common_1 = require("@nestjs/common");
@@ -20,45 +21,88 @@ const conversation_schema_1 = require("./conversation.schema");
 const message_schema_1 = require("./message.schema");
 const appointment_schema_1 = require("../appointments/appointment.schema");
 const user_schema_1 = require("../users/user.schema");
-let ChatService = class ChatService {
+let ChatService = ChatService_1 = class ChatService {
     conversationModel;
     messageModel;
     appointmentModel;
     userModel;
+    logger = new common_1.Logger(ChatService_1.name);
     constructor(conversationModel, messageModel, appointmentModel, userModel) {
         this.conversationModel = conversationModel;
         this.messageModel = messageModel;
         this.appointmentModel = appointmentModel;
         this.userModel = userModel;
     }
+    normalizeId(value) {
+        if (!value)
+            return '';
+        if (typeof value === 'string')
+            return value.trim();
+        if (typeof value === 'object' && value !== null) {
+            const candidate = value._id ?? value.id;
+            if (candidate)
+                return String(candidate).trim();
+        }
+        return String(value).trim();
+    }
+    buildIdCandidates(value) {
+        const normalized = this.normalizeId(value);
+        if (!normalized)
+            return [];
+        const candidates = [normalized];
+        if (mongoose_2.Types.ObjectId.isValid(normalized)) {
+            candidates.push(new mongoose_2.Types.ObjectId(normalized));
+        }
+        return candidates;
+    }
     async createOrGetConversation(createConversationDto, userId, userRole) {
-        const { doctorId, patientId } = createConversationDto;
+        const doctorId = this.normalizeId(createConversationDto.doctorId);
+        const patientId = this.normalizeId(createConversationDto.patientId);
         const user = await this.userModel.findById(userId);
         if (!user)
             throw new common_1.NotFoundException('User not found');
         let isAuthorized = false;
-        if (userRole === 'doctor' && user.linkedId === doctorId) {
+        if (userRole === 'doctor' && this.normalizeId(user.linkedId) === doctorId) {
             isAuthorized = true;
         }
-        else if (userRole === 'patient' && user.linkedId === patientId) {
+        else if (userRole === 'patient' && this.normalizeId(user.linkedId) === patientId) {
             isAuthorized = true;
         }
         if (!isAuthorized) {
             throw new common_1.ForbiddenException('Access denied');
         }
+        const doctorIdCandidates = this.buildIdCandidates(doctorId);
+        const patientIdCandidates = this.buildIdCandidates(patientId);
+        this.logger.log(`createConversation lookup doctorId=${doctorId} patientId=${patientId} role=${userRole} userId=${userId}`);
         const appointmentExists = await this.appointmentModel.findOne({
-            doctorId: new mongoose_2.Types.ObjectId(doctorId),
-            patientId: new mongoose_2.Types.ObjectId(patientId),
-            status: { $ne: 'cancelled' }
+            status: { $nin: ['cancelled', 'deleted'] },
+            $and: [
+                {
+                    $or: [
+                        { doctorId: { $in: doctorIdCandidates } },
+                        { 'doctorId._id': { $in: doctorIdCandidates } },
+                    ],
+                },
+                {
+                    $or: [
+                        { patientId: { $in: patientIdCandidates } },
+                        { 'patientId._id': { $in: patientIdCandidates } },
+                    ],
+                },
+            ],
         });
+        this.logger.log(`createConversation appointmentFound=${!!appointmentExists}`);
         if (!appointmentExists) {
             throw new common_1.ForbiddenException('No appointment found between this doctor and patient');
         }
         let conversation = await this.conversationModel.findOne({
-            doctorId: new mongoose_2.Types.ObjectId(doctorId),
-            patientId: new mongoose_2.Types.ObjectId(patientId),
+            doctorId: { $in: doctorIdCandidates },
+            patientId: { $in: patientIdCandidates },
         });
         if (!conversation) {
+            if (!mongoose_2.Types.ObjectId.isValid(doctorId) || !mongoose_2.Types.ObjectId.isValid(patientId)) {
+                throw new common_1.ForbiddenException('Invalid doctor or patient ID format');
+            }
             conversation = new this.conversationModel({
                 doctorId: new mongoose_2.Types.ObjectId(doctorId),
                 patientId: new mongoose_2.Types.ObjectId(patientId),
@@ -162,7 +206,7 @@ let ChatService = class ChatService {
     }
 };
 exports.ChatService = ChatService;
-exports.ChatService = ChatService = __decorate([
+exports.ChatService = ChatService = ChatService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(conversation_schema_1.Conversation.name)),
     __param(1, (0, mongoose_1.InjectModel)(message_schema_1.Message.name)),

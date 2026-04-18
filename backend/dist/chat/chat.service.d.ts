@@ -10,7 +10,10 @@ export declare class ChatService {
     private messageModel;
     private appointmentModel;
     private userModel;
+    private readonly logger;
     constructor(conversationModel: Model<Conversation>, messageModel: Model<Message>, appointmentModel: Model<Appointment>, userModel: Model<User>);
+    private normalizeId;
+    private buildIdCandidates;
     createOrGetConversation(createConversationDto: CreateConversationDto, userId: string, userRole: string): Promise<Conversation>;
     getConversations(userId: string, userRole: string): Promise<Conversation[]>;
     getMessages(conversationId: string, userId: string, userRole: string): Promise<Message[]>;
